@@ -14,7 +14,7 @@ The connector accepts parameters via system ENVs or command line arguments.
 |SSE_ENDPOINT|SSE endpoint where the application searches for new games|String|first run only|
 
 ### Command line arguments
-Environment variables can be overwritten with command line discordArguments:
+Environment variables can be overwritten with command line arguments:
 ```
 --guildid <number> ------------ Discord server id
 --adminrolename <String> ------ Permitted discord group to control the application
@@ -23,7 +23,7 @@ Environment variables can be overwritten with command line discordArguments:
 --sseendpoint <String> -------- SSE endpoint where the application searches for new games
 ```
 
-If discordArguments or ENVs are used they will always overwrite the configuration file.
+If arguments or ENVs are used they will always overwrite the configuration file.
 ### Configuration file
 When starting the application a configuration file is being generated in the running directory as `config.json`. If such a file still exists it will be used so that no startup parameters are needed anymore.
 
