@@ -9,7 +9,7 @@ on:
     
 jobs:
   build:
-    name: "Auto-build"
+    name: "Auto-build PR"
     runs-on: ubuntu-latest
 
     steps:
