@@ -39,7 +39,7 @@ public class Controller {
 
     public Configuration configuration;
 
-    public Controller(String joinUrl, String sseEndpoint) {
+    private Controller(String joinUrl, String sseEndpoint) {
         INSTANCE = this;
         this.log = new Log();
         //JSON from file to Object
