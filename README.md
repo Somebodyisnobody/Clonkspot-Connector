@@ -13,7 +13,7 @@ The connector accepts parameters via system ENVs or command line arguments.
 |JOIN_URL|Url which is dispatched for others to join games|String|first run only|
 |SSE_ENDPOINT|SSE endpoint where the application searches for new games|String|first run only|
 
-### Commandline discordArguments
+### Command line arguments
 Environment variables can be overwritten with command line discordArguments:
 ```
 --guildid <number> ------------ Discord server id
