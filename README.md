@@ -1,5 +1,7 @@
 # Clonkspot-Connector
-This is a connector for a reference SSE stream of Clonk game events from a [Clonk masterserver](https://github.com/clonkspot/league) (Clonkspot). It currently connects only with discord and publishes new game references on a textchannel.
+This is a connector for a reference SSE stream of Clonk game events from
+a [Clonk masterserver](https://github.com/clonkspot/league) (Clonkspot). It currently connects only with Discord and
+publishes new game references on a text channel.
 
 ## Setup and first run
 The connector accepts parameters via system ENVs or command line arguments.
