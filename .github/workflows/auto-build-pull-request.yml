@@ -1,0 +1,51 @@
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+
+name: Java CI with Maven auto-build
+
+on:
+  pull_request:
+    branches: [ master ]
+    
+jobs:
+  build:
+    name: "Auto-build"
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 15
+      uses: actions/setup-java@v1
+      with:
+        java-version: 15
+    
+    - name: Get SHA of latest commit
+      id: vars
+      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+      
+    - name: Build with Maven
+      run: mvn versions:set -DnewVersion=auto-build-${{ steps.vars.outputs.sha_short }} && mvn -B package --file pom.xml
+
+    - uses: 8BitJonny/gh-get-current-pr@v1
+      id: PR
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        // Only return if PR is still open
+        filterOutClosed: true
+    - run: echo "Your PR is ${prNumber} and its JSON is ${prJSON}"
+      if: success() && steps.PR.outputs.number
+      env:
+        prNumber: ${{ steps.PR.outputs.number }}
+        // JSON object with the full PR object
+        prJSON: ${{ steps.PR.outputs.pr }
+
+
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "pull #${{ steps.PR.outputs.number }}"
+        prerelease: true
+        title: "Auto-build Pull Request #${{ steps.PR.outputs.number }}"
+        files: |
+          LICENSE.md
+          target/*.jar
