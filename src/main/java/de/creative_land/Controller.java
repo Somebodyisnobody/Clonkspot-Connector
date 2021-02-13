@@ -185,7 +185,7 @@ public class Controller {
                     } else if (line.equals("")) {
                         System.out.println("I am still alive!");
                     } else {
-                        System.out.println("Unknown command.");
+                        System.out.println("Unknown command, type \"help\" for a list of commands.");
                     }
                 }
                 bufferedReader.close();
