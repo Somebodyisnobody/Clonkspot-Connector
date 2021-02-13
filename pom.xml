@@ -43,9 +43,7 @@
                 <version>3.3.0</version>
                 <configuration>
                     <archive>
-                        <manifest>
-                            <mainClass>de.creative_land.Controller</mainClass>
-                        </manifest>
+                        <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
                     </archive>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
