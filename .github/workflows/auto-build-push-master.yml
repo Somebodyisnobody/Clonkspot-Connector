@@ -18,22 +18,22 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set up JDK 15
         uses: actions/setup-java@v1
-      with:
-        java-version: 15
-    
-    - name: Get SHA of latest commit
-      id: vars
-      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      
-    - name: Build with Maven
-      run: mvn versions:set -DnewVersion=auto-build-${{ steps.vars.outputs.sha_short }} && mvn clean compile assembly:single --file pom.xml
-        
-    - uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest"
-        prerelease: true
-        title: "Development Build"
-        files: |
-          LICENSE.md
-          target/*.jar
+        with:
+          java-version: 15
+
+      - name: Get SHA of latest commit
+        id: vars
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      - name: Build with Maven
+        run: mvn versions:set -DnewVersion=auto-build-${{ steps.vars.outputs.sha_short }} && mvn clean compile assembly:single --file pom.xml
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            LICENSE.md
+            target/*.jar
