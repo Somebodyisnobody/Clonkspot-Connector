@@ -6,9 +6,7 @@ name: Java CI with Maven auto-build
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
+    
 jobs:
   build:
     name: "Auto-build"
@@ -26,7 +24,7 @@ jobs:
       run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       
     - name: Build with Maven
-      run: mvn versions:set -DnewVersion=RUN-${{ steps.vars.outputs.sha_short }} && mvn -B package --file pom.xml
+      run: mvn versions:set -DnewVersion=auto-build-${{ steps.vars.outputs.sha_short }} && mvn -B package --file pom.xml
         
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
