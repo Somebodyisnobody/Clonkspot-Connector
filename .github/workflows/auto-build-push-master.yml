@@ -6,16 +6,18 @@ name: Java CI with Maven auto-build
 on:
   push:
     branches: [ master ]
-    
+    paths:
+      - 'src/**'
+
 jobs:
   build:
     name: "Auto-build push"
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK 15
-      uses: actions/setup-java@v1
+      - uses: actions/checkout@v2
+      - name: Set up JDK 15
+        uses: actions/setup-java@v1
       with:
         java-version: 15
     
