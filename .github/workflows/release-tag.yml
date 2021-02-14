@@ -7,6 +7,9 @@ on:
   push:
     tags:
       - "v*"
+  create:
+    tags:
+      - "v*"
 
 jobs:
   build-tagged-release:
