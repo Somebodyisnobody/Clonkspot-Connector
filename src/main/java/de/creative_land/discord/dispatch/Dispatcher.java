@@ -112,8 +112,7 @@ public class Dispatcher {
         if (!isRunning()) return false;
 
         //Only announce games with a specific host engine version
-        //Todo remove nullcheck when clonkspot PR is accepted and implement nullcheck for settings
-        if ((gameReference.engineBuild != 0 && gameReference.engineBuild != Controller.INSTANCE.configuration.getEngineBuild()) || (gameReference.engine != null && !gameReference.engine.equalsIgnoreCase(Controller.INSTANCE.configuration.getEngine())))
+        if ((gameReference.engineBuild != Controller.INSTANCE.configuration.getEngineBuild()) || (!gameReference.engine.equalsIgnoreCase(Controller.INSTANCE.configuration.getEngine())))
             return false;
 
         try {
