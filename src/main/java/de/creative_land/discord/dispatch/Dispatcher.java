@@ -112,7 +112,7 @@ public class Dispatcher {
         if (!isRunning()) return false;
 
         //Only announce games with a specific host engine version
-        if ((gameReference.engineBuild != Controller.INSTANCE.configuration.getEngineBuild()) || (!gameReference.engine.equalsIgnoreCase(Controller.INSTANCE.configuration.getEngine())))
+        if (!isCorrectVersion(gameReference))
             return false;
 
         try {
@@ -176,6 +176,22 @@ public class Dispatcher {
      */
     private boolean isRunning() {
         return Objects.equals(DiscordConnector.INSTANCE.getJda().getPresence().getActivity(), net.dv8tion.jda.api.entities.Activity.watching(de.creative_land.discord.Activity.RUNNING.toString()));
+    }
+
+    /**
+     * Checks if the game reference version information matches the requirements.
+     *
+     * @param gameReference parsed game reference.
+     * @return true if the game reference has the correct version, false if not.
+     */
+    private boolean isCorrectVersion(GameReference gameReference) {
+        final var engine = Controller.INSTANCE.configuration.getEngine();
+        final var engineBuild = Controller.INSTANCE.configuration.getEngineBuild();
+
+        if (engine != null && engineBuild != 0) {
+            return gameReference.engine.equalsIgnoreCase(engine) && gameReference.engineBuild == engineBuild;
+        }
+        return true;
     }
 
     /**
