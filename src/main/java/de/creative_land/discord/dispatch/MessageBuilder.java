@@ -21,6 +21,7 @@ package de.creative_land.discord.dispatch;
 import de.creative_land.Controller;
 import de.creative_land.clonkspot.model.GameReference;
 import de.creative_land.discord.DiscordConnector;
+import net.dv8tion.jda.api.entities.Role;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
@@ -43,11 +44,12 @@ public class MessageBuilder {
     /**
      * Builds a new message string for a game reference. The message string contains all changes needed and is ready for being sent. Manipulation rules are already applied on the message.
      *
-     * @param gameReference parsed game reference.
-     * @param buildAction   action which message string has to be built.
+     * @param gameReference                           parsed game reference.
+     * @param buildAction                             action which message string has to be built.
+     * @param mentionedRolesFromLastDispatchedMessage the roles that were dispatched in the last message. If no last message exist (on announcing a new game reference) use null.
      * @return the built message string or null if the build process was intentionally aborted (e.g. code injection, test scenario).
      */
-    public String build(@NotNull GameReference gameReference, @NotNull BuildAction buildAction) {
+    public String build(@NotNull GameReference gameReference, @NotNull BuildAction buildAction, List<Role> mentionedRolesFromLastDispatchedMessage) {
 
         if (System.getenv("DEBUG") == null && gameReference.title.equals("Testing Clonkspot-Discord connector do not join!"))
             return null;
@@ -79,7 +81,7 @@ public class MessageBuilder {
                 } catch (Exception e) {
                     Controller.INSTANCE.log.addLogEntry("Message Builder: Error while applying manipulation rule: Check if replacement \"" + replacement + "\" of \"" + manipulationRule.getName() + "\" is correct. " + e.getClass().getName() + " " + e.getMessage());
                 }
-            mentions = getMentions(manipulationRule.getRoles());
+            mentions = getMentions(manipulationRule.getRoles(), mentionedRolesFromLastDispatchedMessage);
         }
 
         //Mark title bold if exist after applying manipulation rule
@@ -210,41 +212,52 @@ public class MessageBuilder {
     }
 
     /**
-     * Gets all roles of the manipulation rule and converts them into mentions.
+     * Gets all roles of the manipulation rule and converts them into mentions when there's no active cooldown.
+     * If roles from a previous version of the dispatched message is provided this roles will be used.
      *
-     * @param roles the roles list of a manipulation rule.
+     * @param rolesToBeMentioned                      the roles list of a manipulation rule.
+     * @param mentionedRolesFromLastDispatchedMessage the roles that were dispatched in the last message. If no last message exist (on announcing a new game reference) use null.
      * @return discord readable mentions or null if the list was null.
      */
-    private String getMentions(List<String> roles) {
-        if (roles != null) {
+    private String getMentions(List<String> rolesToBeMentioned, List<Role> mentionedRolesFromLastDispatchedMessage) {
+        if (rolesToBeMentioned != null) {
             StringBuilder mentions = new StringBuilder();
-            for (var role : roles) {
+            for (var roleToBeMentioned : rolesToBeMentioned) {
 
-                //Check if the role was mentioned before
-                final var lastMentionedRoleDate = mentionedRoles.get(role);
-                if (lastMentionedRoleDate != null) {
-
-                    //Search for a cooldown for this role
-                    int cooldown = 0;
-                    try {
-                        //Rules should be present in normal use
-                        //noinspection OptionalGetWithoutIsPresent
-                        cooldown = Controller.INSTANCE.configuration.getMentionRoleCooldowns().stream()
-                                .filter(mentionRoleCooldown -> mentionRoleCooldown.getRole().equals(role))
-                                .findFirst().get().getCooldown();
-                    } catch (Exception ignored) {
-                    }
-
-                    //If there is a cooldown compare it with the current time and the last mention
-                    if (cooldown != 0 && lastMentionedRoleDate.isAfter(OffsetDateTime.now().minusMinutes(cooldown))) {
-                        mentions.append("@").append(role).append(" ");
+                //Will be null on create
+                if (mentionedRolesFromLastDispatchedMessage != null) {
+                    //Check if last message contained the current role as mention. If yes then mention this role ignoring the cooldown, if no just create the @-string
+                    if (mentionedRolesFromLastDispatchedMessage.stream().noneMatch(mentionedRoleFromLastDispatchedMessage -> mentionedRoleFromLastDispatchedMessage.getName().equals(roleToBeMentioned))) {
+                        mentions.append("@").append(roleToBeMentioned).append(" ");
                         continue;
                     }
+                } else {
+                    //Check if the role was mentioned before
+                    final var lastMentionedRoleDate = mentionedRoles.get(roleToBeMentioned);
+                    if (lastMentionedRoleDate != null) {
+
+                        //Search for a cooldown for this role
+                        int cooldown = 0;
+                        try {
+                            //Rules should be present in normal use
+                            //noinspection OptionalGetWithoutIsPresent
+                            cooldown = Controller.INSTANCE.configuration.getMentionRoleCooldowns().stream()
+                                    .filter(mentionRoleCooldown -> mentionRoleCooldown.getRole().equals(roleToBeMentioned))
+                                    .findFirst().get().getCooldown();
+                        } catch (Exception ignored) {
+                        }
+
+                        //If there is a cooldown compare it with the current time and the last mention
+                        if (cooldown != 0 && lastMentionedRoleDate.isAfter(OffsetDateTime.now().minusMinutes(cooldown))) {
+                            mentions.append("@").append(roleToBeMentioned).append(" ");
+                            continue;
+                        }
+                    }
                 }
-                final var roleIds = DiscordConnector.INSTANCE.getJda().getRolesByName(role, false);
+                final var roleIds = DiscordConnector.INSTANCE.getJda().getRolesByName(roleToBeMentioned, false);
                 if (!roleIds.isEmpty()) {
                     mentions.append(roleIds.get(0).getAsMention()).append(" ");
-                    mentionedRoles.put(role, OffsetDateTime.now());
+                    mentionedRoles.put(roleToBeMentioned, OffsetDateTime.now());
                 }
             }
             return mentions.toString();

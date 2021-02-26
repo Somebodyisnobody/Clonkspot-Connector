@@ -156,7 +156,7 @@ public class Dispatcher {
         //now the request can be marked as handled (returning true)
 
         final String messageContent;
-        if ((messageContent = messageBuilder.build(gameReference, BuildAction.CREATE)) != null) {
+        if ((messageContent = messageBuilder.build(gameReference, BuildAction.CREATE, null)) != null) {
             DiscordConnector.INSTANCE.getTargetDispatchChannel().sendMessage(messageContent).queue(message -> {
                 addDispatchedMessage(new DispatchedMessage(message, gameReference));
                 semaphore.release();
@@ -310,7 +310,7 @@ public class Dispatcher {
      * @param buildAction       action which message string has to be built.
      */
     private void editMessage(DispatchedMessage dispatchedMessage, GameReference gameReference, BuildAction buildAction) {
-        final String messageContent = messageBuilder.build(gameReference, buildAction);
+        final String messageContent = messageBuilder.build(gameReference, buildAction, dispatchedMessage.getMessage().getMentionedRoles());
         if (messageContent == null) {
             semaphore.release();
             return;
