@@ -56,7 +56,7 @@ public class Dispatcher {
 
         final GameReference gameReference;
         if ((gameReference = parseJson(message)) == null) return;
-        gameReference.essEventType = event;
+        gameReference.sseEventType = event;
 
         switch (event) {
             case "create" -> createEvent(gameReference);
@@ -130,7 +130,7 @@ public class Dispatcher {
         if (isIgnoredHost(gameReference)) {
             semaphore.release();
             //Only log if it's a new game to avoid log spam
-            if (gameReference.essEventType.equals("create"))
+            if (gameReference.sseEventType.equals("create"))
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by hostname: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
             return false;
         }
@@ -139,7 +139,7 @@ public class Dispatcher {
         if (hostHasActiveCooldown(gameReference)) {
             semaphore.release();
             //Only log if it's a new game to avoid log spam
-            if (gameReference.essEventType.equals("create"))
+            if (gameReference.sseEventType.equals("create"))
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by cooldown: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
             return false;
         }
@@ -148,7 +148,7 @@ public class Dispatcher {
         if (gameReference.flags.passwordNeeded) {
             semaphore.release();
             //Only log if it's a new game to avoid log spam
-            if (gameReference.essEventType.equals("create"))
+            if (gameReference.sseEventType.equals("create"))
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by password: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
             return false;
         }

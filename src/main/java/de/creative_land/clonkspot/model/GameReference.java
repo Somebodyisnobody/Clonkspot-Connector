@@ -51,7 +51,7 @@ public class GameReference {
 
     final public Scenario scenario;
 
-    public String essEventType;
+    public String sseEventType;
 
     public GameReference(@JsonProperty("id") int id, @JsonProperty("title") String title, @JsonProperty("status") String status,
                          @JsonProperty("type") String league, @JsonProperty("comment") String comment, @JsonProperty("maxPlayers") int maxPlayers,
