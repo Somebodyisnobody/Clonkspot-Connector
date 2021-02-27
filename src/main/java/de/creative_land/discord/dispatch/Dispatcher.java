@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.creative_land.Controller;
 import de.creative_land.clonkspot.model.GameReference;
 import de.creative_land.discord.DiscordConnector;
+import net.dv8tion.jda.api.OnlineStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
@@ -51,6 +52,7 @@ public class Dispatcher {
      * @param event   SSE event
      */
     public void process(@NotNull String message, @NotNull String event) {
+        if (!DiscordConnector.INSTANCE.getJda().getPresence().getStatus().equals(OnlineStatus.ONLINE)) return;
         if (!(event.equals("create") || event.equals("update") || event.equals("delete") || event.equals("end")))
             return;
 
