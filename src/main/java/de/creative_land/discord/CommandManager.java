@@ -19,10 +19,12 @@
 package de.creative_land.discord;
 
 import de.creative_land.Command;
+import de.creative_land.Controller;
 import de.creative_land.discord.commands.*;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
@@ -70,7 +72,18 @@ public class CommandManager {
         if (serverCommand != null) {
             serverCommand.performCommand(channel, arguments);
         } else if (name.equalsIgnoreCase("help")) {
-            channel.sendMessage("```\nAvailable commands:\n" + commands.keySet().stream().map(Command::toString).collect(Collectors.joining("\n")) + "\n```").queue();
+            final var message = "Available commands:\n" + commands.keySet().stream().map(Command::toString).collect(Collectors.joining("\n"));
+            try {
+                if (message.length() < 2000) {
+                    channel.sendMessage("```\n" + message + "\n```").queue();
+                } else {
+                    channel.sendFile(message.getBytes(StandardCharsets.UTF_8), "help.txt").queue();
+                }
+            } catch (Exception e) {
+                channel.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
+                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to print help command: " + e.getClass().getName() + ", " + e.getMessage());
+            }
+
         } else {
             channel.sendMessage("Command not found. Type \"help\" for a list of commands.").queue();
         }

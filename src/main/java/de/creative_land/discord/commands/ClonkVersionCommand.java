@@ -31,11 +31,17 @@ public class ClonkVersionCommand implements ServerCommand {
             String[] arguments = joinedArgs.charAt(0) == "`".toCharArray()[0] ? joinedArgs.substring(1).split("`") : new String[0];
             if (arguments.length == 3 && !arguments[0].equals(" ") && arguments[1].equals(" ") && !arguments[2].equals(" ")) {
                 final var engineBuild = Integer.parseInt(arguments[2]);
+                final var engine = arguments[0].equals("null") || arguments[0].equals("") ? null : arguments[0];
 
-                Controller.INSTANCE.configuration.setEngine(arguments[0]);
+                Controller.INSTANCE.configuration.setEngine(engine);
                 Controller.INSTANCE.configuration.setEngineBuild(engineBuild);
-                channel.sendMessage(":white_check_mark: New Clonk version set: \"" + arguments[0] + "\" on build " + engineBuild + ".").queue();
-                Controller.INSTANCE.log.addLogEntry("DiscordConnector: New Clonk version set by \"" + channel.getUser().getName() + "\" (Engine: \"" + arguments[0] + "\", Build: \"" + engineBuild + "\").");
+                if (engineBuild == 0 || engine == null) {
+                    channel.sendMessage(":white_check_mark: Clonk version requirement removed.").queue();
+                    Controller.INSTANCE.log.addLogEntry("DiscordConnector: Clonk version requirement removed by \"" + channel.getUser().getName() + "\").");
+                } else {
+                    channel.sendMessage(":white_check_mark: New Clonk version requirement set: \"" + engine + "\" on build " + engineBuild + ".").queue();
+                    Controller.INSTANCE.log.addLogEntry("DiscordConnector: New Clonk version requirement set by \"" + channel.getUser().getName() + "\" (Engine: \"" + engine + "\", Build: \"" + engineBuild + "\").");
+                }
             } else {
                 channel.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue();
             }

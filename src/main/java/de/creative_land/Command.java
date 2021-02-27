@@ -18,7 +18,6 @@
 
 package de.creative_land;
 
-@SuppressWarnings("ALL")
 public enum Command {
     EXIT("exit"),
     HELP("help"),
@@ -37,7 +36,7 @@ public enum Command {
     ADDMANIPULATIONRULE("addmanipulationrule `<name>` `<pattern>` `<replacement>` `<role>,<role>`  ----  Manipulating game titles and mention roles (replacement = regex capture group)."),
     REMOVEMANIPULATIONRULE("removemanipulationrule <name>  -----------------------------------------------  Removes an existing manipulation rule."),
     RESOLVEID("resolveid <id>  --------------------------------------------------------------  Resolves a dispatched game reference by id."),
-    CLONKVERSION("clonkversion `<engine>` `<build version>`  -----------------------------------  Sets a new Clonk version for the bot."),
+    CLONKVERSION("clonkversion `<engine>` `<build version>`  -----------------------------------  Sets a new Clonk version for the bot which must match on new refrences. Use `null` and 0 for no restriction."),
     ;
 
     private final String value;
