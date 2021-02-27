@@ -31,11 +31,11 @@ public class ClonkVersionCommand implements ServerCommand {
             String[] arguments = joinedArgs.charAt(0) == "`".toCharArray()[0] ? joinedArgs.substring(1).split("`") : new String[0];
             if (arguments.length == 3 && !arguments[0].equals(" ") && arguments[1].equals(" ") && !arguments[2].equals(" ")) {
                 final var engineBuild = Integer.parseInt(arguments[2]);
-                final var engine = arguments[0].equals("null") || arguments[0].equals("") ? null : arguments[0];
+                final var engine = arguments[0].equals("null") ? "" : arguments[0];
 
                 Controller.INSTANCE.configuration.setEngine(engine);
                 Controller.INSTANCE.configuration.setEngineBuild(engineBuild);
-                if (engineBuild == 0 || engine == null) {
+                if (engineBuild == 0 || engine.equals("")) {
                     channel.sendMessage(":white_check_mark: Clonk version requirement removed.").queue();
                     Controller.INSTANCE.log.addLogEntry("DiscordConnector: Clonk version requirement removed by \"" + channel.getUser().getName() + "\").");
                 } else {
