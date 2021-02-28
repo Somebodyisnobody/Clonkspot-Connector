@@ -29,20 +29,20 @@ import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Objects;
-import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 
 public class Dispatcher {
 
     private final MessageBuilder messageBuilder;
     private final ArrayList<DispatchedMessage> dispatchedMessages;
-    private final Semaphore semaphore;
+    private final HashSet<Integer> processedGamesList;
 
     public Dispatcher() {
         this.messageBuilder = new MessageBuilder();
         this.dispatchedMessages = new ArrayList<>();
-        this.semaphore = new Semaphore(1);
+        this.processedGamesList = new HashSet<>();
     }
 
     /**
@@ -60,11 +60,26 @@ public class Dispatcher {
         if ((gameReference = parseJson(message)) == null) return;
         gameReference.sseEventType = event;
 
+        synchronized (processedGamesList) {
+            while (processedGamesList.contains(gameReference.id)) {
+                try {
+                    processedGamesList.wait();
+                } catch (InterruptedException ignored) {
+                }
+            }
+            processedGamesList.add(gameReference.id);
+        }
+
         switch (event) {
             case "create" -> createEvent(gameReference);
             case "update" -> updateEvent(gameReference);
             case "delete" -> deleteEvent(gameReference); //nicht gestartetes game beendet
             case "end" -> endEvent(gameReference);    //gestartetes game zu ende
+        }
+
+        synchronized (processedGamesList) {
+            processedGamesList.remove(gameReference.id);
+            processedGamesList.notifyAll();
         }
     }
 
@@ -117,10 +132,6 @@ public class Dispatcher {
         if (!isCorrectVersion(gameReference))
             return false;
 
-        try {
-            semaphore.acquire();
-        } catch (InterruptedException ignored) {
-        }
         //Never announce an already announced game (checked by game id)
         if (isAlreadyAnnounced(gameReference)) {
             semaphore.release();
@@ -129,7 +140,6 @@ public class Dispatcher {
 
         //Never announce ignored hosts exempt they have active players
         if (isIgnoredHost(gameReference)) {
-            semaphore.release();
             //Only log if it's a new game to avoid log spam
             if (gameReference.sseEventType.equals("create"))
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by hostname: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
@@ -138,7 +148,6 @@ public class Dispatcher {
 
         //Never announce hosts with active cooldown (checked by hostname)
         if (hostHasActiveCooldown(gameReference)) {
-            semaphore.release();
             //Only log if it's a new game to avoid log spam
             if (gameReference.sseEventType.equals("create"))
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by cooldown: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
@@ -147,7 +156,6 @@ public class Dispatcher {
 
         //Never announce password protected games
         if (gameReference.flags.passwordNeeded) {
-            semaphore.release();
             //Only log if it's a new game to avoid log spam
             if (gameReference.sseEventType.equals("create"))
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by password: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
@@ -156,15 +164,17 @@ public class Dispatcher {
 
         //now the request can be marked as handled (returning true)
 
-        final String messageContent;
-        if ((messageContent = messageBuilder.build(gameReference, BuildAction.CREATE, null)) != null) {
-            DiscordConnector.INSTANCE.getTargetDispatchChannel().sendMessage(messageContent).queue(message -> {
-                addDispatchedMessage(new DispatchedMessage(message, gameReference));
-                semaphore.release();
+        final String messageContent = messageBuilder.build(gameReference, BuildAction.CREATE, null);
+        if (messageContent != null) {
+            try {
+                addDispatchedMessage(new DispatchedMessage(
+                        DiscordConnector.INSTANCE.getTargetDispatchChannel().sendMessage(messageContent).complete(),
+                        gameReference
+                ));
                 System.out.println("DiscordConnector: Dispatched: " + gameReference.id + ".");
-            }, failure -> dispatchFailure(gameReference, failure, BuildAction.CREATE));
-        } else {
-            semaphore.release();
+            } catch (RuntimeException failure) {
+                dispatchFailure(gameReference, failure, BuildAction.CREATE);
+            }
         }
 
 
@@ -207,10 +217,6 @@ public class Dispatcher {
         //Only update references without runtime join
         if (gameReference.flags.joinAllowed) return false;
 
-        try {
-            semaphore.acquire();
-        } catch (InterruptedException ignored) {
-        }
         //Filter out the references that belongs to the game and allowed runtime join or was in status lobby before
         final var optionalDispatchedMessage = dispatchedMessages.stream()
                 .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id)
@@ -239,11 +245,6 @@ public class Dispatcher {
         //Only update references with runtime join
         if (!gameReference.flags.joinAllowed) return false;
 
-        try {
-            semaphore.acquire();
-        } catch (InterruptedException ignored) {
-        }
-
         //Filter out the reference that belongs to the game and denied runtime join or was in status lobby before
         final var optionalDispatchedMessage = dispatchedMessages.stream()
                 .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id)
@@ -268,10 +269,6 @@ public class Dispatcher {
      * @param gameReference parsed game reference to be marked as closed.
      */
     private void closeReference(GameReference gameReference) {
-        try {
-            semaphore.acquire();
-        } catch (InterruptedException ignored) {
-        }
 
         //Search for game reference id and replace
         final var optionalDispatchedMessage = dispatchedMessages.stream()
@@ -295,11 +292,6 @@ public class Dispatcher {
      * @return true if the game reference was handled, false if it was rejected.
      */
     private boolean deleteReference(GameReference gameReference) {
-        try {
-            semaphore.acquire();
-        } catch (InterruptedException ignored) {
-        }
-
         //Search for game reference id and delete
         final var optionalDispatchedMessage = dispatchedMessages.stream()
                 .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id)
@@ -311,10 +303,10 @@ public class Dispatcher {
             return false;
         }
         final var dispatchedMessage = optionalDispatchedMessage.get();
-        dispatchedMessage.getMessage().delete().queue(deletedMessage -> {
-            dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.markAsDeleted());
-            semaphore.release();
-        }, failure -> dispatchFailure(gameReference, failure, BuildAction.DELETE));
+        dispatchedMessage.getMessage().delete().queue(
+                deletedMessage -> dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.markAsDeleted()),
+                failure -> dispatchFailure(gameReference, failure, BuildAction.DELETE)
+        );
         return true;
     }
 
@@ -347,7 +339,6 @@ public class Dispatcher {
      * @param buildAction   type of action.
      */
     private void dispatchFailure(GameReference gameReference, Throwable failure, BuildAction buildAction) {
-        semaphore.release();
         Controller.INSTANCE.log.addLogEntry("DiscordConnector: Dispatch failed: " + gameReference.id + ", Action: " + buildAction + ", Error: \"" + failure.getMessage() + "\".");
         DiscordConnector.INSTANCE.scanEnvironment(null);
     }
