@@ -31,7 +31,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 public class Controller {
-    public static final String VERSION = "1.0";
+    public static final String VERSION = "1.1";
 
     public static Controller INSTANCE;
 
