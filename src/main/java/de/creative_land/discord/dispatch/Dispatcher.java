@@ -133,10 +133,7 @@ public class Dispatcher {
             return false;
 
         //Never announce an already announced game (checked by game id)
-        if (isAlreadyAnnounced(gameReference)) {
-            semaphore.release();
-            return false;
-        }
+        if (isAlreadyAnnounced(gameReference)) return false;
 
         //Never announce ignored hosts exempt they have active players
         if (isIgnoredHost(gameReference)) {
@@ -176,8 +173,6 @@ public class Dispatcher {
                 dispatchFailure(gameReference, failure, BuildAction.CREATE);
             }
         }
-
-
         return true;
     }
 
@@ -225,10 +220,7 @@ public class Dispatcher {
                 .findFirst();
 
         //Don't handle if no game reference matched
-        if (optionalDispatchedMessage.isEmpty()) {
-            semaphore.release();
-            return false;
-        }
+        if (optionalDispatchedMessage.isEmpty()) return false;
 
         editMessage(optionalDispatchedMessage.get(), gameReference, BuildAction.RUNNING_NO_RUNTIME_JOIN);
         return true;
@@ -253,10 +245,7 @@ public class Dispatcher {
                 .findFirst();
 
         //Don't handle if no game reference matched
-        if (optionalDispatchedMessage.isEmpty()) {
-            semaphore.release();
-            return false;
-        }
+        if (optionalDispatchedMessage.isEmpty()) return false;
 
         editMessage(optionalDispatchedMessage.get(), gameReference, BuildAction.RUNNING_WITH_RUNTIME_JOIN);
         return true;
@@ -276,10 +265,7 @@ public class Dispatcher {
                 .filter(dispatchedMessage -> !dispatchedMessage.getDeleted())
                 .findFirst();
 
-        if (optionalDispatchedMessage.isEmpty()) {
-            semaphore.release();
-            return;
-        }
+        if (optionalDispatchedMessage.isEmpty()) return;
 
         editMessage(optionalDispatchedMessage.get(), gameReference, BuildAction.CLOSE);
     }
@@ -298,10 +284,8 @@ public class Dispatcher {
                 .filter(dispatchedMessage -> !dispatchedMessage.getDeleted())
                 .findFirst();
 
-        if (optionalDispatchedMessage.isEmpty()) {
-            semaphore.release();
-            return false;
-        }
+        if (optionalDispatchedMessage.isEmpty()) return false;
+
         final var dispatchedMessage = optionalDispatchedMessage.get();
         dispatchedMessage.getMessage().delete().queue(
                 deletedMessage -> dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.markAsDeleted()),
@@ -320,14 +304,11 @@ public class Dispatcher {
      */
     private void editMessage(DispatchedMessage dispatchedMessage, GameReference gameReference, BuildAction buildAction) {
         final String messageContent = messageBuilder.build(gameReference, buildAction, dispatchedMessage.getMessage().getMentionedRoles());
-        if (messageContent == null) {
-            semaphore.release();
-            return;
-        }
-        dispatchedMessage.getMessage().editMessage(messageContent).queue(newMessage -> {
-            dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.update(newMessage, gameReference));
-            semaphore.release();
-        }, failure -> dispatchFailure(gameReference, failure, buildAction));
+        if (messageContent == null) return;
+        dispatchedMessage.getMessage().editMessage(messageContent).queue(
+                message -> dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.update(message, gameReference)),
+                failure -> dispatchFailure(gameReference, failure, buildAction)
+        );
     }
 
     /**
