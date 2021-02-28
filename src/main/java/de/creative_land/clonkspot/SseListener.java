@@ -18,6 +18,10 @@
 
 package de.creative_land.clonkspot;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import com.here.oksse.ServerSentEvent;
 import de.creative_land.Controller;
 import de.creative_land.discord.DiscordConnector;
@@ -26,6 +30,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class SseListener implements ServerSentEvent.Listener {
+    
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES, new ArrayBlockingQueue<>(50));
 
     int errorCounter = 0;
     boolean firstStart = true;
@@ -50,7 +56,7 @@ public class SseListener implements ServerSentEvent.Listener {
 
     @Override
     public void onMessage(ServerSentEvent sse, String id, String event, String message) {
-        DiscordConnector.INSTANCE.dispatcher.process(message, event);
+        executor.execute(() -> DiscordConnector.INSTANCE.dispatcher.process(message, event));
     }
 
     @Override
