@@ -164,6 +164,7 @@ public class Dispatcher {
         final String messageContent = messageBuilder.build(gameReference, BuildAction.CREATE, null);
         if (messageContent != null) {
             try {
+                System.out.println("DiscordConnector: Calling complete: " + gameReference.id + ".");
                 addDispatchedMessage(new DispatchedMessage(
                         DiscordConnector.INSTANCE.getTargetDispatchChannel().sendMessage(messageContent).complete(),
                         gameReference
