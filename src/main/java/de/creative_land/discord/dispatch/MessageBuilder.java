@@ -49,7 +49,7 @@ public class MessageBuilder {
      * @param mentionedRolesFromLastDispatchedMessage the roles that were dispatched in the last message. If no last message exist (on announcing a new game reference) use null.
      * @return the built message string or null if the build process was intentionally aborted (e.g. code injection, test scenario).
      */
-    public String build(@NotNull GameReference gameReference, @NotNull BuildAction buildAction, List<Role> mentionedRolesFromLastDispatchedMessage) {
+    String build(@NotNull GameReference gameReference, @NotNull BuildAction buildAction, List<Role> mentionedRolesFromLastDispatchedMessage) {
 
         if (System.getenv("DEBUG") == null && gameReference.title.equals("Testing Clonkspot-Discord connector do not join!"))
             return null;
@@ -257,7 +257,8 @@ public class MessageBuilder {
                 final var roleIds = DiscordConnector.INSTANCE.getJda().getRolesByName(roleToBeMentioned, false);
                 if (!roleIds.isEmpty()) {
                     mentions.append(roleIds.get(0).getAsMention()).append(" ");
-                    mentionedRoles.put(roleToBeMentioned, OffsetDateTime.now());
+                    if (mentionedRolesFromLastDispatchedMessage == null)
+                        mentionedRoles.put(roleToBeMentioned, OffsetDateTime.now());
                 }
             }
             return mentions.toString();

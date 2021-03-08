@@ -25,6 +25,7 @@ import net.dv8tion.jda.api.OnlineStatus;
 import okhttp3.Request;
 import okhttp3.Response;
 
+import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +45,7 @@ public class SseListener implements ServerSentEvent.Listener {
             firstStart = false;
         }
 
-        if (errorCounter >= 10 && DiscordConnector.INSTANCE.getJda().getPresence().getStatus() == OnlineStatus.DO_NOT_DISTURB) {
+        if (errorCounter >= 10 && Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             DiscordConnector.INSTANCE.status.setRunning();
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: Clonkspot is back!");
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: RUNNING.");
@@ -86,7 +87,7 @@ public class SseListener implements ServerSentEvent.Listener {
         }
 
         if (errorCounter >= 10) {
-            if (!(DiscordConnector.INSTANCE.getJda().getPresence().getStatus() == OnlineStatus.DO_NOT_DISTURB)) {
+            if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
                 DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
                 Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: ERROR_UPSTREAM_OFFLINE.");
             }

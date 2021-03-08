@@ -52,7 +52,7 @@ public class Dispatcher {
      * @param event   SSE event
      */
     public void process(@NotNull String message, @NotNull String event) {
-        if (!DiscordConnector.INSTANCE.getJda().getPresence().getStatus().equals(OnlineStatus.ONLINE)) return;
+        if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.ONLINE)) return;
         if (!(event.equals("create") || event.equals("update") || event.equals("delete") || event.equals("end")))
             return;
 
@@ -182,7 +182,7 @@ public class Dispatcher {
      * @return true, if the bot is in status "RUNNING".
      */
     private boolean isRunning() {
-        return Objects.equals(DiscordConnector.INSTANCE.getJda().getPresence().getActivity(), net.dv8tion.jda.api.entities.Activity.watching(de.creative_land.discord.Activity.RUNNING.toString()));
+        return Objects.equals(DiscordConnector.INSTANCE.status.getCurrentActivity(), de.creative_land.discord.Activity.RUNNING);
     }
 
     /**

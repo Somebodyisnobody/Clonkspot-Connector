@@ -33,7 +33,7 @@ public class StartCommand implements ServerCommand {
         final var jdaPresence = DiscordConnector.INSTANCE.getJda().getPresence();
         if (Objects.equals(jdaPresence.getActivity(), Activity.watching(de.creative_land.discord.Activity.RUNNING.toString()))) {
             channel.sendMessage(":x: Service already started. New games will be announced when they appear on clonkspot.").queue();
-        } else if (jdaPresence.getStatus() == OnlineStatus.DO_NOT_DISTURB) {
+        } else if (Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             channel.sendMessage(":x: Error, please see in log.").queue();
         } else {
             DiscordConnector.INSTANCE.status.setRunning();
