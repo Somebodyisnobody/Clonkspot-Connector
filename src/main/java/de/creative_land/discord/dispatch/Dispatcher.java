@@ -52,6 +52,7 @@ public class Dispatcher {
      * @param event   SSE event
      */
     public void process(@NotNull String message, @NotNull String event) {
+        System.out.println("DiscordConnector: Incoming event: " + event + ".");
         if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.ONLINE)) return;
         if (!(event.equals("create") || event.equals("update") || event.equals("delete") || event.equals("end")))
             return;
@@ -60,6 +61,7 @@ public class Dispatcher {
         if ((gameReference = parseJson(message)) == null) return;
         gameReference.sseEventType = event;
 
+        System.out.println("DiscordConnector: Before sync: " + gameReference.id + ".");
         synchronized (processedGamesList) {
             while (processedGamesList.contains(gameReference.id)) {
                 try {
@@ -69,6 +71,7 @@ public class Dispatcher {
             }
             processedGamesList.add(gameReference.id);
         }
+        System.out.println("DiscordConnector: After sync: " + gameReference.id + ".");
 
         switch (event) {
             case "create" -> createEvent(gameReference);
@@ -85,7 +88,8 @@ public class Dispatcher {
 
     //START EVENTS//
     private void createEvent(GameReference gameReference) {
-        announceNewGameReference(gameReference);
+        System.out.println("DiscordConnector: Announce new Game: " + gameReference.id + ".");
+        System.out.println("DiscordConnector: game reference handled: " + announceNewGameReference(gameReference) + ".");
     }
 
     @SuppressWarnings("UnnecessaryReturnStatement")
@@ -127,13 +131,16 @@ public class Dispatcher {
     private boolean announceNewGameReference(GameReference gameReference) {
         //Never announce if the bot status is not RUNNING
         if (!isRunning()) return false;
+        System.out.println("DiscordConnector: Bot is running: " + gameReference.id + ".");
 
         //Only announce games with a specific host engine version
         if (!isCorrectVersion(gameReference))
             return false;
+        System.out.println("DiscordConnector: Correct version: " + gameReference.id + ".");
 
         //Never announce an already announced game (checked by game id)
         if (isAlreadyAnnounced(gameReference)) return false;
+        System.out.println("DiscordConnector: Not announced in past: " + gameReference.id + ".");
 
         //Never announce ignored hosts exempt they have active players
         if (isIgnoredHost(gameReference)) {
