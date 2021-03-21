@@ -18,43 +18,77 @@
 
 package de.creative_land.clonkspot;
 
-import com.here.oksse.OkSse;
-import com.here.oksse.ServerSentEvent;
-import de.creative_land.Controller;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
-import java.util.concurrent.TimeUnit;
+import de.creative_land.Controller;
+import de.creative_land.sse.SSEListener;
+import de.creative_land.sse.SSEParser;
 
 public class ClonkspotConnector {
     public static ClonkspotConnector INSTANCE;
 
-    private final Request request;
+    private final SSEListener listener;
 
-    private final OkSse okSse;
+    private final SSEParser parser;
 
-    private final SseListener listener;
+    private final HttpClient client;
 
-    public ServerSentEvent sse;
+    private HttpRequest request;
 
     public ClonkspotConnector() {
         INSTANCE = this;
 
         listener = new SseListener();
 
-        @SuppressWarnings("unused")
-        OkHttpClient client = new OkHttpClient.Builder().readTimeout(200, TimeUnit.SECONDS).build();
-        //OkSse okSse = new OkSse(client);
-        okSse = new OkSse();
-        request = new Request.Builder().url(Controller.INSTANCE.configuration.getSseEndpoint()).build();
-        startSse();
+        parser = new SSEParser(2000); // TODO offload to config
+        parser.setListener(listener);
+
+        client = HttpClient.newHttpClient();
+
+        request = HttpRequest.newBuilder()
+                .uri(URI.create(Controller.INSTANCE.configuration.getSseEndpoint()))
+                .build();
+        start();
     }
 
     /**
      * Creates a new SSE-Client and overwrites an old one.
      */
-    protected void startSse() {
-        sse = okSse.newServerSentEvent(request, listener);
+    protected void start() {
+        client.sendAsync(request, BodyHandlers.fromLineSubscriber(parser));
+        listener.onOpen();
     }
 
+    /**
+     * Tries to restart the sse client obeying the timeout specified by the server.
+     */
+    public void restart() {
+        Instant now = Instant.now();
+        Instant target = now.plus(parser.getTimeout(), ChronoUnit.MILLIS);
+        while (now.isBefore(target)) {
+            try {
+                long delta = Duration.between(now, target).toMillis();
+                if (delta < 1) {
+                    break;
+                }
+                Thread.sleep(delta);
+            } catch (InterruptedException e) {
+            }
+            now = Instant.now();
+        }
+        start();
+    }
+    
+    /**
+     * Closes this conncetion. This action is irreversible and no restarts will be possible.
+     */
+    public void close() {
+        parser.close();
+    }
 }
