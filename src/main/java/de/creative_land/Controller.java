@@ -48,7 +48,7 @@ public class Controller {
             Controller.INSTANCE.log.addLogEntry("Controller: Importing from disk: " + System.getProperty("user.dir") + File.separator + "config.json");
             configuration = mapper.readValue(new File(System.getProperty("user.dir") + File.separator + "config.json"), Configuration.class);
         } catch (IOException e) {
-            Controller.INSTANCE.log.addLogEntry("Controller: Error while importing file to disk: " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry(e);
         }
         if (configuration == null) {
             Controller.INSTANCE.log.addLogEntry("Controller: Using new configuration file (Is saved, when the discord login was successful).");

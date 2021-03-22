@@ -37,7 +37,7 @@ public class HostCooldownCommand implements ServerCommand {
             Controller.INSTANCE.log.addLogEntry("DiscordConnector: New host cooldown set from " + oldCooldown + " minutes to " + newCooldown + " minutes by \"" + channel.getUser().getName() + "\".");
         } catch (NumberFormatException e) {
             channel.sendMessage(":x: Error: Failed to parse integer.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new host cooldown: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new host cooldown: ", e);
         }
     }
 }

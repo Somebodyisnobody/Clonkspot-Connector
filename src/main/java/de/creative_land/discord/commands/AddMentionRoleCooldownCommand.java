@@ -42,7 +42,7 @@ public class AddMentionRoleCooldownCommand implements ServerCommand {
             }
         } catch (NumberFormatException e) {
             channel.sendMessage(":x: Failed to parse integer.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new role cooldown: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new role cooldown: ", e);
         }
 
     }

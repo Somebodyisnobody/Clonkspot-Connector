@@ -60,7 +60,7 @@ public class SseListener implements ServerSentEvent.Listener {
         try {
             executor.execute(() -> DiscordConnector.INSTANCE.dispatcher.process(message, event));
         } catch (Exception e) {
-            Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: ThreadPool error: " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry(e);
         }
     }
 
