@@ -83,7 +83,7 @@ public class ClonkspotConnector {
                     break;
                 }
                 Thread.sleep(delta);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
             }
             now = Instant.now();
         }
