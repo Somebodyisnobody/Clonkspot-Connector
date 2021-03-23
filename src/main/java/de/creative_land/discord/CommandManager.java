@@ -98,7 +98,7 @@ public class CommandManager {
     /**
      * Selects and runs the right command.
      *
-     * @param command full command string.
+     * @param string  full command string.
      * @param channel the user ({@link PrivateChannel}) who issued the command.
      */
     public void selectAndPerformCommand(String string, PrivateChannel channel) {
@@ -153,8 +153,7 @@ public class CommandManager {
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
-            Controller.INSTANCE.log.addLogEntry(String.format("DiscordConnector: Failed to print help command: %s, %s",
-                    e.getClass().getName(), e.getMessage()));
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to print help command: ", e);
         }
     }
 

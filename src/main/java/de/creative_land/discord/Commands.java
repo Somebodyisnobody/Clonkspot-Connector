@@ -79,8 +79,7 @@ public class Commands {
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
-            Controller.INSTANCE.log.addLogEntry(
-                    "DiscordConnector: Failed to retrieve log: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to retrieve log: ", e);
         }
     }
 
@@ -175,8 +174,7 @@ public class Commands {
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
-            Controller.INSTANCE.log.addLogEntry(
-                    "DiscordConnector: Failed to retrieve config: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to retrieve config: ", e);
         }
     }
 
@@ -239,8 +237,7 @@ public class Commands {
                     + " minutes to " + newCooldown + " minutes by \"" + c.getUser().getName() + "\".");
         } catch (NumberFormatException e) {
             c.sendMessage(":x: Error: Failed to parse integer.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new host cooldown: "
-                    + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new host cooldown: ", e);
         }
     }
 
@@ -271,8 +268,7 @@ public class Commands {
             }
         } catch (NumberFormatException e) {
             c.sendMessage(":x: Error: Failed to parse integer.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new ignored host cooldown: "
-                    + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new ignored host cooldown: ", e);
         }
     }
 
@@ -312,8 +308,7 @@ public class Commands {
             }
         } catch (NumberFormatException e) {
             c.sendMessage(":x: Failed to parse integer.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new role cooldown: "
-                    + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new role cooldown: ", e);
         }
     }
 
@@ -386,8 +381,7 @@ public class Commands {
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error, please see in log.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new manipulation rule: "
-                    + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new manipulation rule: ", e);
         }
     }
 
@@ -421,12 +415,10 @@ public class Commands {
             }
         } catch (NumberFormatException e) {
             c.sendMessage(":x: Error: Failed to parse integer.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to resolve game reference: "
-                    + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to resolve game reference: ", e);
         } catch (JsonProcessingException e) {
             c.sendMessage(":x: Error while parsing GameReferenceModel.").queue();
-            Controller.INSTANCE.log.addLogEntry("Controller: Error while parsing GameReferenceModel: "
-                    + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("Controller: Error while parsing GameReferenceModel: ", e);
         }
     }
 
@@ -461,8 +453,7 @@ public class Commands {
             c.sendMessage(":x: Error: Failed to parse integer.").queue();
         } catch (Exception e) {
             c.sendMessage(":x: Error, please see in log.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new Clonk version: "
-                    + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new Clonk version: ", e);
         }
     }
 }
