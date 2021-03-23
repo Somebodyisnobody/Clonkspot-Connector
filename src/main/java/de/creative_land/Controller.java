@@ -168,13 +168,13 @@ public class Controller {
             try {
                 while ((line = bufferedReader.readLine()) != null) {
 
-                    if (line.equalsIgnoreCase(Command.EXIT.name())) {
+                    if (line.equalsIgnoreCase("exit")) {
                         DiscordConnector.INSTANCE.getJda().getPresence().setStatus(OnlineStatus.OFFLINE);
                         DiscordConnector.INSTANCE.getJda().shutdown();
                         ClonkspotConnector.INSTANCE.sse.close();
                         System.out.println("Issued shutdown by console");
                         break;
-                    } else if (line.equalsIgnoreCase(Command.HELP.name())) {
+                    } else if (line.equalsIgnoreCase("help")) {
                         @SuppressWarnings("StringBufferReplaceableByString")
                         final var stringBuilder = new StringBuilder();
                         final var newline = "\n";
