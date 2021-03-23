@@ -57,7 +57,7 @@ public class CommandManager {
         registerCommand("hostcooldown", List.of("minutes"), "Sets a new general host cooldown for all hosts.",
                 Commands::setHostCooldown);
 
-        registerCommand("addignoredhost", List.of("mininum players", "hostname", "reason"),
+        registerCommand("addignoredhost", List.of("`mininum players`", "`hostname`", "`reason`"),
                 "Ignores a host if the number of players isn't reached (case-sensitive).", Commands::addIgnoredHost);
 
         registerCommand("removeignoredhost", List.of("hostname"),
@@ -69,7 +69,7 @@ public class CommandManager {
         registerCommand("removementionrolecooldown", List.of("role"),
                 "Removes an existing cooldown for role mention (case-sensitive).", Commands::removeRoleMentionCooldown);
 
-        registerCommand("addmanipulationrule", List.of("name", "pattern", "replacement"),
+        registerCommand("addmanipulationrule", List.of("`name`", "`pattern`", "`replacement`"),
                 "Manipulating game titles and mention roles (replacement = regex capture group).",
                 Commands::addManipulationRule);
 
@@ -78,7 +78,7 @@ public class CommandManager {
 
         registerCommand("resolveid", List.of("id"), "Resolves a dispatched game reference by id.", Commands::resolveID);
 
-        registerCommand("clonkversion", List.of("engine", "build version"),
+        registerCommand("clonkversion", List.of("`engine`", "`build version`"),
                 "Sets a new Clonk version for the bot which must match on new refrences. Use `null` and 0 for no restriction.",
                 Commands::setVersion);
     }
