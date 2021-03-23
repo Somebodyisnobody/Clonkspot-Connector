@@ -41,7 +41,7 @@ public class ResolveIdCommand implements ServerCommand {
             Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to resolve game reference: " + e.getClass().getName() + ", " + e.getMessage());
         } catch (JsonProcessingException e) {
             channel.sendMessage(":x: Error while parsing GameReferenceModel.").queue();
-            Controller.INSTANCE.log.addLogEntry("Controller: Error while parsing GameReferenceModel: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("Controller: Error while parsing GameReferenceModel: ", e);
         }
     }
 }

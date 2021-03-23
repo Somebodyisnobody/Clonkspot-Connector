@@ -49,7 +49,7 @@ public class ClonkVersionCommand implements ServerCommand {
             channel.sendMessage(":x: Error: Failed to parse integer.").queue();
         } catch (Exception e) {
             channel.sendMessage(":x: Error, please see in log.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new Clonk version: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new Clonk version: ", e);
         }
 
     }

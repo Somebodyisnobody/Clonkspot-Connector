@@ -36,7 +36,7 @@ public class LogCommand implements ServerCommand {
             }
         } catch (Exception e) {
             channel.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to retrieve log: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to retrieve log: ", e);
         }
 
     }

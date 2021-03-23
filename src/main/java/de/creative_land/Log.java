@@ -18,19 +18,19 @@
 
 package de.creative_land;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.LinkedList;
+import java.util.Vector;
 
 public class Log {
 
-    private final LinkedList<String> log;
+    private final Vector<String> log;
 
     public Log() {
-        log = new LinkedList<>();
+        log = new Vector<>();
         addLogEntry("Started the application");
-
-
     }
 
     public String printLog() {
@@ -44,5 +44,16 @@ public class Log {
         if (log.size() > 2000) {
             log.remove(11);
         }
+    }
+
+    public void addLogEntry(Throwable e) {
+        addLogEntry("", e);
+    }
+
+    public void addLogEntry(String prefix, Throwable e) {
+        StringWriter writer = new StringWriter();
+        writer.write(prefix);
+        e.printStackTrace(new PrintWriter(writer));
+        addLogEntry(writer.toString());
     }
 }
