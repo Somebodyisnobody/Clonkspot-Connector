@@ -248,7 +248,7 @@ public class Commands {
         }
         try {
             final var joinedArgs = String.join(" ", args);
-            String[] arguments = joinedArgs.charAt(0) == "`".toCharArray()[0] ? joinedArgs.substring(1).split("`")
+            String[] arguments = joinedArgs.charAt(0) == '`' ? joinedArgs.substring(1).split("`")
                     : new String[0];
             if (arguments.length == 5 && !arguments[0].equals(" ") && arguments[1].equals(" ")
                     && !arguments[2].equals(" ") && arguments[3].equals(" ") && !arguments[4].equals(" ")) {
@@ -332,7 +332,7 @@ public class Commands {
         try {
             // Parse strings
             final var joinedArgs = String.join(" ", args);
-            String[] arguments = joinedArgs.charAt(0) == "`".toCharArray()[0] ? joinedArgs.substring(1).split("`")
+            String[] arguments = joinedArgs.charAt(0) == '`' ? joinedArgs.substring(1).split("`")
                     : new String[0];
             if (arguments.length == 7 && !arguments[0].equals(" ") && arguments[1].equals(" ")
                     && !arguments[2].equals(" ") && arguments[3].equals(" ") && !arguments[4].equals(" ")
@@ -426,7 +426,7 @@ public class Commands {
         try {
             // Parse strings
             final var joinedArgs = String.join(" ", args);
-            String[] arguments = joinedArgs.charAt(0) == "`".toCharArray()[0] ? joinedArgs.substring(1).split("`")
+            String[] arguments = joinedArgs.charAt(0) == '`' ? joinedArgs.substring(1).split("`")
                     : new String[0];
             if (arguments.length == 3 && !arguments[0].equals(" ") && arguments[1].equals(" ")
                     && !arguments[2].equals(" ")) {
