@@ -18,6 +18,10 @@
 
 package de.creative_land.clonkspot;
 
+import de.creative_land.Controller;
+import de.creative_land.sse.SSEListener;
+import de.creative_land.sse.SSEParser;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -25,10 +29,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-
-import de.creative_land.Controller;
-import de.creative_land.sse.SSEListener;
-import de.creative_land.sse.SSEParser;
 
 public class ClonkspotConnector {
     public static ClonkspotConnector INSTANCE;
@@ -39,7 +39,7 @@ public class ClonkspotConnector {
 
     private final HttpClient client;
 
-    private HttpRequest request;
+    private final HttpRequest request;
 
     public ClonkspotConnector() {
         INSTANCE = this;
@@ -61,7 +61,12 @@ public class ClonkspotConnector {
      * Creates a new SSE-Client and overwrites an old one.
      */
     protected void start() {
-        client.sendAsync(request, BodyHandlers.fromLineSubscriber(parser));
+        var result = client.sendAsync(request, BodyHandlers.fromLineSubscriber(parser));
+        result.exceptionally(e -> {
+            listener.onError(e);
+            return null;
+        });
+        result.thenAccept(r -> listener.onComplete());
         listener.onOpen();
     }
 
@@ -84,7 +89,7 @@ public class ClonkspotConnector {
         }
         start();
     }
-    
+
     /**
      * Closes this conncetion. This action is irreversible and no restarts will be possible.
      */
