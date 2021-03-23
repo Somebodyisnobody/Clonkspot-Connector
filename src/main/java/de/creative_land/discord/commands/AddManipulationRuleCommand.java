@@ -68,7 +68,7 @@ public class AddManipulationRuleCommand implements ServerCommand {
             }
         } catch (Exception e) {
             channel.sendMessage(":x: Error, please see in log.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new manipulation rule: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new manipulation rule: ", e);
         }
     }
 }

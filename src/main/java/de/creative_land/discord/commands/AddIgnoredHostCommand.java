@@ -46,7 +46,7 @@ public class AddIgnoredHostCommand implements ServerCommand {
             }
         } catch (NumberFormatException e) {
             channel.sendMessage(":x: Error: Failed to parse integer.").queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new ignored host cooldown: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to set new ignored host cooldown: ", e);
         }
     }
 }

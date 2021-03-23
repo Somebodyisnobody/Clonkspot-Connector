@@ -92,7 +92,7 @@ public class ConfigCommand implements ServerCommand {
             }
         } catch (Exception e) {
             channel.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to retrieve config: " + e.getClass().getName() + ", " + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to retrieve config: ", e);
         }
     }
 }

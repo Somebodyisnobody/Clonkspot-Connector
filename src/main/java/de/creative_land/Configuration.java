@@ -73,7 +73,7 @@ public class Configuration {
             try {
                 mapper.writeValue(new File(System.getProperty("user.dir") + File.separator + "config.json"), this);
             } catch (IOException e) {
-                Controller.INSTANCE.log.addLogEntry("Controller: Error while writing file to disk: " + e.getMessage());
+                Controller.INSTANCE.log.addLogEntry("Controller: Error while writing file to disk: ", e);
             }
         }
     }

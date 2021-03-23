@@ -81,7 +81,7 @@ public class CommandManager {
                 }
             } catch (Exception e) {
                 channel.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
-                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to print help command: " + e.getClass().getName() + ", " + e.getMessage());
+                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to print help command: ", e);
             }
 
         } else {

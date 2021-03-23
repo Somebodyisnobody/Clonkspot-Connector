@@ -320,7 +320,7 @@ public class Dispatcher {
      * @param buildAction   type of action.
      */
     private void dispatchFailure(GameReference gameReference, Throwable failure, BuildAction buildAction) {
-        Controller.INSTANCE.log.addLogEntry("DiscordConnector: Dispatch failed: " + gameReference.id + ", Action: " + buildAction + ", Error: \"" + failure.getMessage() + "\".");
+        Controller.INSTANCE.log.addLogEntry("DiscordConnector: Dispatch failed: " + gameReference.id + ", Action: " + buildAction + ", Error: ", failure);
         DiscordConnector.INSTANCE.scanEnvironment(null);
     }
 
@@ -376,7 +376,7 @@ public class Dispatcher {
         try {
             return mapper.readValue(message, GameReference.class);
         } catch (JsonProcessingException e) {
-            Controller.INSTANCE.log.addLogEntry("DiscordConnector: JSON Parsing error: \n" + e.getMessage());
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: JSON Parsing error: \n", e);
         }
         return null;
     }
