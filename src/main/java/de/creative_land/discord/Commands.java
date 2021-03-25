@@ -32,7 +32,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+/**
+ * A static collection of methods to serve as entry point for external commands.
+ * Methods in this class should not depend on each other and should be seen in isolation.
+ * 
+ */
 public class Commands {
+    
+    /* Do not instantiate */
+    private Commands() {}
 
     public static void stop(PrivateChannel c, String[] args) {
         final var connector = DiscordConnector.INSTANCE;

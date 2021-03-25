@@ -30,10 +30,18 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+/**
+ * Maintains a list of all commands available via Discord.
+ * 
+ */
 public class CommandManager {
 
+    /** A map of command key to command. */
     private final Map<String, Command> commands;
 
+    /**
+     * Constructs a new command manager.
+     */
     public CommandManager() {
         this.commands = new HashMap<>();
 
