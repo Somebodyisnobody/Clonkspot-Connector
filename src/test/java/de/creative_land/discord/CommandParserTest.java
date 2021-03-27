@@ -43,6 +43,7 @@ public class CommandParserTest {
                 {{"command arg1 arg2"}, {"command", "arg1", "arg2"}},
                 {{"command \"a r g 1\" arg2 'arg 3'"}, {"command", "a r g 1", "arg2", "arg 3"}},
                 {{"'command' `arg 1` arg2 arg3"}, {"command", "arg 1", "arg2", "arg3"}},
+                {{"'command' '' 'arg1'"}, {"command", "arg1"}},
                 {{"'command"}, null},
                 {{"command 'arg1' 'arg2"}, null}
         };

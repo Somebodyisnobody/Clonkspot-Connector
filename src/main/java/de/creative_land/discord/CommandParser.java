@@ -30,8 +30,11 @@ public class CommandParser {
 
             if (quote.map(c -> c == ch).orElse(false)) {
                 quote = Optional.empty();
-                args.add(sb.toString());
+                String res = sb.toString();
                 sb.setLength(0);
+                if (!res.isBlank()) {
+                    args.add(res);
+                }
                 continue;
             }
             if (quote.isPresent()) {
