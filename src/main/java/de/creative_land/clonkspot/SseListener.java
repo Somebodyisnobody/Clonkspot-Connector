@@ -44,15 +44,11 @@ public class SseListener implements SSEListener {
             new ArrayBlockingQueue<>(50));
 
     private final Timer timer = new Timer(true);
-    private Optional<TimerTask> task;
+    private Optional<TimerTask> task = Optional.empty();
     private Instant lastMessage = Instant.now();
 
     int errorCounter = 0;
     boolean firstStart = true;
-
-    public SseListener() {
-        this.task = Optional.of(toTask(this::tryTimeout));
-    }
 
     @Override
     public void onOpen() {
