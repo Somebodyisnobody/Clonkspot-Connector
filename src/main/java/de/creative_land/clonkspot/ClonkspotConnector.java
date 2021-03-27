@@ -18,10 +18,6 @@
 
 package de.creative_land.clonkspot;
 
-import de.creative_land.Controller;
-import de.creative_land.sse.SSEListener;
-import de.creative_land.sse.SSEParser;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -29,13 +25,18 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.TimeUnit;
+
+import de.creative_land.Controller;
+import de.creative_land.sse.SSEListener;
+import de.creative_land.sse.SSEParser;
 
 public class ClonkspotConnector {
     public static ClonkspotConnector INSTANCE;
 
-    private final SSEListener listener;
+    private SSEListener listener;
 
-    private final SSEParser parser;
+    private SSEParser parser;
 
     private final HttpClient client;
 
@@ -43,11 +44,6 @@ public class ClonkspotConnector {
 
     public ClonkspotConnector() {
         INSTANCE = this;
-
-        listener = new SseListener();
-
-        parser = new SSEParser(2000); // TODO offload to config
-        parser.setListener(listener);
 
         client = HttpClient.newHttpClient();
 
@@ -61,12 +57,19 @@ public class ClonkspotConnector {
      * Creates a new SSE-Client and overwrites an old one.
      */
     protected void start() {
+        if (parser != null) {
+            parser.close();
+        }
+        listener = new SseListener();
+        parser = new SSEParser(2000);
+        parser.setListener(listener);
         var result = client.sendAsync(request, BodyHandlers.fromLineSubscriber(parser));
         result.exceptionally(e -> {
             listener.onError(e);
             return null;
         });
         result.thenAccept(r -> listener.onComplete());
+        
         listener.onOpen();
     }
 
@@ -78,11 +81,7 @@ public class ClonkspotConnector {
         Instant target = now.plus(parser.getTimeout(), ChronoUnit.MILLIS);
         while (now.isBefore(target)) {
             try {
-                long delta = Duration.between(now, target).toMillis();
-                if (delta < 1) {
-                    break;
-                }
-                Thread.sleep(delta);
+                TimeUnit.MILLISECONDS.sleep(Duration.between(now, target).toMillis());
             } catch (InterruptedException ignored) {
             }
             now = Instant.now();
@@ -91,9 +90,11 @@ public class ClonkspotConnector {
     }
 
     /**
-     * Closes this conncetion. This action is irreversible and no restarts will be possible.
+     * Closes this connection.
      */
     public void close() {
-        parser.close();
+        if(parser != null) {
+            parser.close();
+        }
     }
 }

@@ -18,7 +18,13 @@
 
 package de.creative_land.clonkspot;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -31,9 +37,15 @@ import de.creative_land.sse.SSEMessage;
 import net.dv8tion.jda.api.OnlineStatus;
 
 public class SseListener implements SSEListener {
+    
+    private static final Duration TIMEOUT = Duration.of(3, ChronoUnit.MINUTES); //TODO move to config
 
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(50));
+    
+    private final Timer timer = new Timer(true);
+    private Optional<TimerTask> task;
+    private Instant lastMessage = Instant.now();
 
     int errorCounter = 0;
     boolean firstStart = true;
@@ -55,10 +67,30 @@ public class SseListener implements SSEListener {
 
         // reset errorCounter on successful connect
         errorCounter = 0;
+        
+        synchronized (lastMessage) {
+            task.ifPresent(TimerTask::cancel);
+            task = Optional.of(toTask(this::tryTimeout));
+            lastMessage = Instant.now();
+            task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+        }
     }
 
     @Override
     public void onMessage(SSEMessage msg) {
+        synchronized(lastMessage) {
+            lastMessage = Instant.now();
+            if (task.map(TimerTask::cancel).orElse(true)) {
+                //task was cancelled or never scheduled
+                task = Optional.of(toTask(this::tryTimeout));
+                task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+            } else {
+                //task is running or has ran already
+                //we are restarting so abort
+                return;
+            }
+        }
+        
         try {
             executor.execute(() -> DiscordConnector.INSTANCE.dispatcher.process(msg.data, msg.event));
         } catch (RejectedExecutionException e) {
@@ -68,6 +100,9 @@ public class SseListener implements SSEListener {
 
     @Override
     public void onComplete() {
+        synchronized(timer) {
+            task.ifPresent(TimerTask::cancel);
+        }
         Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE channel closed.");
         if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
@@ -78,6 +113,9 @@ public class SseListener implements SSEListener {
 
     @Override
     public void onError(Throwable error) {
+        synchronized(timer) {
+            task.ifPresent(TimerTask::cancel);
+        }
         if (errorCounter < 30000) {
             errorCounter++;
         }
@@ -96,5 +134,29 @@ public class SseListener implements SSEListener {
             }
         }
         ClonkspotConnector.INSTANCE.restart();
+    }
+    
+    private void tryTimeout() {
+        task.ifPresent(TimerTask::cancel);
+        synchronized (timer) {
+            Instant now = Instant.now();
+            Instant target = lastMessage.plus(TIMEOUT);
+            if (now.isBefore(target)) {
+                Controller.INSTANCE.log.addLogEntry(String.format(
+                        "ClonkspotConnector: Stream restart is %d milliseconds too early.",
+                                ChronoUnit.MILLIS.between(now, target)));
+            }
+        }
+        ClonkspotConnector.INSTANCE.start();
+    }
+    
+    private static TimerTask toTask(Runnable runnable) {
+        return new TimerTask() {
+            
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        };
     }
 }

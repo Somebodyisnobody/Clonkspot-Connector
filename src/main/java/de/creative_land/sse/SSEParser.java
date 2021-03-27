@@ -130,6 +130,9 @@ public class SSEParser implements Subscriber<String> {
         if (closed) {
             throw new IllegalStateException("Parser has been closed.");
         }
+        if (sub != null) {
+            sub.cancel();
+        }
         this.sub = subscription;
         this.event = "";
         this.data.setLength(0);
@@ -192,12 +195,9 @@ public class SSEParser implements Subscriber<String> {
         if (closed) {
             return;
         }
-        try {
-            listener.onError(throwable);
-        } catch (Exception e) {
-            Controller.INSTANCE.log
-                    .addLogEntry("SSEParser: listener onError event has thrown an exception. That should not happen.");
-        }
+        this.close();
+        this.data.setLength(0);
+        this.event = "";
     }
 
     @Override
