@@ -18,6 +18,12 @@
 
 package de.creative_land.clonkspot;
 
+import de.creative_land.Controller;
+import de.creative_land.discord.DiscordConnector;
+import de.creative_land.sse.SSEListener;
+import de.creative_land.sse.SSEMessage;
+import net.dv8tion.jda.api.OnlineStatus;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -30,25 +36,23 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import de.creative_land.Controller;
-import de.creative_land.discord.DiscordConnector;
-import de.creative_land.sse.SSEListener;
-import de.creative_land.sse.SSEMessage;
-import net.dv8tion.jda.api.OnlineStatus;
-
 public class SseListener implements SSEListener {
     
     private static final Duration TIMEOUT = Duration.of(3, ChronoUnit.MINUTES); //TODO move to config
 
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(50));
-    
+
     private final Timer timer = new Timer(true);
     private Optional<TimerTask> task;
     private Instant lastMessage = Instant.now();
 
     int errorCounter = 0;
     boolean firstStart = true;
+
+    public SseListener() {
+        this.task = Optional.of(toTask(this::tryTimeout));
+    }
 
     @Override
     public void onOpen() {
