@@ -101,7 +101,16 @@ public class SseListener implements SSEListener {
     @Override
     public void onComplete() {
         synchronized(timer) {
-            task.ifPresent(TimerTask::cancel);
+            lastMessage = Instant.now();
+            if (task.map(TimerTask::cancel).orElse(true)) {
+                //task was cancelled or never scheduled
+                task = Optional.of(toTask(this::tryTimeout));
+                task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+            } else {
+                //task is running or has ran already
+                //we are restarting so abort
+                return;
+            }
         }
         Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE channel closed.");
         if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
@@ -114,7 +123,16 @@ public class SseListener implements SSEListener {
     @Override
     public void onError(Throwable error) {
         synchronized(timer) {
-            task.ifPresent(TimerTask::cancel);
+            lastMessage = Instant.now();
+            if (task.map(TimerTask::cancel).orElse(true)) {
+                //task was cancelled or never scheduled
+                task = Optional.of(toTask(this::tryTimeout));
+                task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+            } else {
+                //task is running or has ran already
+                //we are restarting so abort
+                return;
+            }
         }
         if (errorCounter < 30000) {
             errorCounter++;

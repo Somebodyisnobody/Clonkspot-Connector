@@ -21,10 +21,12 @@ package de.creative_land.clonkspot;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import de.creative_land.Controller;
@@ -37,6 +39,8 @@ public class ClonkspotConnector {
     private SSEListener listener;
 
     private SSEParser parser;
+    
+    private CompletableFuture<HttpResponse<Void>> result;
 
     private final HttpClient client;
 
@@ -60,10 +64,13 @@ public class ClonkspotConnector {
         if (parser != null) {
             parser.close();
         }
+        if(result != null) {
+            result.cancel(true);
+        }
         listener = new SseListener();
         parser = new SSEParser(2000);
         parser.setListener(listener);
-        var result = client.sendAsync(request, BodyHandlers.fromLineSubscriber(parser));
+        result = client.sendAsync(request, BodyHandlers.fromLineSubscriber(parser));
         result.exceptionally(e -> {
             listener.onError(e);
             return null;
