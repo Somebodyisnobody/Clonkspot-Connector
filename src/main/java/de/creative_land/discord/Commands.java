@@ -18,8 +18,16 @@
 
 package de.creative_land.discord;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Pattern;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import de.creative_land.Configuration;
 import de.creative_land.Controller;
 import de.creative_land.IgnoredHostname;
 import de.creative_land.discord.dispatch.ManipulationRule;
@@ -28,21 +36,23 @@ import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
-import java.util.regex.Pattern;
-
 /**
  * A static collection of methods to serve as entry point for external commands.
- * Methods in this class should not depend on each other and should be seen in isolation.
+ * Methods in this class should be seen in isolation.
  * 
  */
 public class Commands {
-    
+
     /* Do not instantiate */
     private Commands() {}
 
+
+    //Entry points
+
     public static void stop(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 0, c)) {
+            return;
+        }
         final var connector = DiscordConnector.INSTANCE;
         final var controller = Controller.INSTANCE;
         final var jdaPresence = connector.getJda().getPresence();
@@ -61,6 +71,9 @@ public class Commands {
     }
 
     public static void start(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 0, c)) {
+            return;
+        }
         final var connector = DiscordConnector.INSTANCE;
         final var controller = Controller.INSTANCE;
         final var jdaPresence = connector.getJda().getPresence();
@@ -81,6 +94,9 @@ public class Commands {
     }
 
     public static void log(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 0, c)) {
+            return;
+        }
         final var controller = Controller.INSTANCE;
         try {
             String log = controller.log.printLog();
@@ -96,13 +112,12 @@ public class Commands {
     }
 
     public static void notice(PrivateChannel c, String[] args) {
-        final var controller = Controller.INSTANCE;
-        if (args.length == 0) {
-            c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 1, c)) {
             return;
         }
+        final var controller = Controller.INSTANCE;
         controller.log
-                .addLogEntry(String.format("Notice from \"%s\": %s", c.getUser().getName(), String.join(" ", args)));
+                .addLogEntry(String.format("Notice from \"%s\": %s", c.getUser().getName(), args[0]));
         c.sendMessage(":white_check_mark: Notice successfully stored in the log.").queue();
     }
 
@@ -188,13 +203,12 @@ public class Commands {
     }
 
     public static void targetChannel(PrivateChannel c, String[] args) {
-        final var connector = DiscordConnector.INSTANCE;
-        final var controller = Controller.INSTANCE;
-        if (args.length != 1 || args[0].equals("")) {
-            c.sendMessage(":x: Not enough or too much arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 1, c)) {
             return;
         }
-        if (args[0].charAt(0) == "#".charAt(0))
+        final var connector = DiscordConnector.INSTANCE;
+        final var controller = Controller.INSTANCE;
+        if (args[0].charAt(0) == '#')
             args[0] = args[0].substring(1);
         final var textChannels = connector.getJda().getTextChannelsByName(args[0], true);
         if (textChannels.isEmpty()) {
@@ -221,28 +235,27 @@ public class Commands {
     }
 
     public static void newName(PrivateChannel c, String[] args) {
-        final var connector = DiscordConnector.INSTANCE;
-        final var controller = Controller.INSTANCE;
-        if (args.length != 1 || args[0].equals("")) {
-            c.sendMessage(":x: Not enough or too much arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 1, c)) {
             return;
         }
+        final var connector = DiscordConnector.INSTANCE;
+        final var controller = Controller.INSTANCE;
+        String name = args[0];
         try {
-            connector.getJda().getSelfUser().getManager().setName(String.join(" ", args)).queue();
+            connector.getJda().getSelfUser().getManager().setName(name).queue();
             c.sendMessage(":white_check_mark: New name set.").queue();
             controller.log.addLogEntry(String.format("DiscordConnector: New name set by \"%s\" (Name: \"%s\").",
-                    c.getUser().getName(), String.join(" ", args)));
+                    c.getUser().getName(), name));
         } catch (IllegalArgumentException e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
         }
     }
 
     public static void setHostCooldown(PrivateChannel c, String[] args) {
-        final var controller = Controller.INSTANCE;
-        if (args.length != 1 || args[0].equals("")) {
-            c.sendMessage(":x: Not enough or too much arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 1, c)) {
             return;
         }
+        final var controller = Controller.INSTANCE;
         try {
             final var oldCooldown = controller.configuration.getHostCooldown();
             final var newCooldown = Integer.parseInt(args[0]);
@@ -259,31 +272,24 @@ public class Commands {
     }
 
     public static void addIgnoredHost(PrivateChannel c, String[] args) {
-        final var controller = Controller.INSTANCE;
-        if (args.length < 2 || args[0].equals("") || args[1].equals("")) {
-            c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 2, c)) {
             return;
         }
+        final var controller = Controller.INSTANCE;
         try {
-            final var joinedArgs = String.join(" ", args);
-            String[] arguments = joinedArgs.charAt(0) == '`' ? joinedArgs.substring(1).split("`")
-                    : new String[0];
-            if (arguments.length == 5 && !arguments[0].equals(" ") && arguments[1].equals(" ")
-                    && !arguments[2].equals(" ") && arguments[3].equals(" ") && !arguments[4].equals(" ")) {
-
-                final var minPlayer = Integer.parseInt(arguments[0]);
-                if (controller.configuration.addIgnoredHostname(
-                        new IgnoredHostname(arguments[2], c.getUser().getName(), minPlayer, arguments[4]))) {
-                    c.sendMessage(String.format(
-                            ":white_check_mark: New ignored host \"%s\" with minimum of %d players and reason \"%s\" added.",
-                            arguments[2], minPlayer, arguments[4])).queue();
-                    controller.log.addLogEntry(String.format(
-                            "New ignored host \"%s\" with minimum of %d players added by \"%s\" with reason \"%s\".",
-                            arguments[2], minPlayer, c.getUser().getName(), arguments[4]));
-                } else {
-                    c.sendMessage(":x: Error: This hostname already in the list.").queue();
-                }
-
+            final var minPlayer = Integer.parseInt(args[0]);
+            final var hostname = args[1];
+            final var reason = args[2];
+            if (controller.configuration.addIgnoredHostname(
+                    new IgnoredHostname(hostname, c.getUser().getName(), minPlayer, reason))) {
+                c.sendMessage(String.format(
+                        ":white_check_mark: New ignored host \"%s\" with minimum of %d players and reason \"%s\" added.",
+                        hostname, minPlayer, reason)).queue();
+                controller.log.addLogEntry(String.format(
+                        "New ignored host \"%s\" with minimum of %d players added by \"%s\" with reason \"%s\".",
+                        hostname, minPlayer, c.getUser().getName(), reason));
+            } else {
+                c.sendMessage(":x: Error: This hostname already in the list.").queue();
             }
         } catch (NumberFormatException e) {
             c.sendMessage(":x: Error: Failed to parse integer.").queue();
@@ -292,40 +298,40 @@ public class Commands {
     }
 
     public static void removeIgnoredHost(PrivateChannel c, String[] args) {
-        final var controller = Controller.INSTANCE;
-        if (args.length < 1) {
-            c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 1, c)) {
             return;
         }
-        final var hostname = String.join(" ", args);
+        final var controller = Controller.INSTANCE;
+        final var hostname = args[0];
         if (controller.configuration.removeIgnoredHostname(hostname)) {
             c.sendMessage(":white_check_mark: Host deleted.").queue();
-            controller.log.addLogEntry("DiscordConnector: Ignored host \"" + hostname + "\" removed by \""
-                    + c.getUser().getName() + "\".");
+            controller.log.addLogEntry(String.format(
+                    "DiscordConnector: Ignored host \"%s\" removed by \"%s\".",
+                    hostname, c.getUser().getName()));
         } else {
             c.sendMessage(":x: Error: Hostname not found.").queue();
         }
     }
 
     public static void addRoleMentionCooldown(PrivateChannel c, String[] args) {
-        final var controller = Controller.INSTANCE;
-        if (args.length != 2 || args[0].equals("") || args[1].equals("")) {
-            c.sendMessage(":x: Not enough or too much arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 2, c)) {
             return;
         }
+        final var controller = Controller.INSTANCE;
         try {
-            if (args[0].charAt(0) == "@".charAt(0))
-                args[0] = args[0].substring(1);
+            final var role = args[0].charAt(0) == '@' ? args[0].substring(1) : args[0];
             final var cooldown = Integer.parseInt(args[1]);
+            
             if (controller.configuration
-                    .addMentionRoleCooldown(new MentionRoleCooldown(args[0], cooldown, c.getUser().getName()))) {
-                c.sendMessage(
-                        ":white_check_mark: New role cooldown set: " + cooldown + " minutes for \"@" + args[0] + "\".")
-                        .queue();
-                controller.log.addLogEntry("DiscordConnector: New role cooldown set: " + cooldown + " minutes for \"@"
-                        + args[0] + "\" by \"" + c.getUser().getName() + "\".");
+                    .addMentionRoleCooldown(new MentionRoleCooldown(role, cooldown, c.getUser().getName()))) {
+                c.sendMessage(String.format(
+                        ":white_check_mark: New role cooldown set: %d minutes for \"@%s\".",
+                        cooldown, role)).queue();
+                controller.log.addLogEntry(String.format(
+                        "DiscordConnector: New role cooldown set: %d minutes for \"@%s\" by \"%s\".",
+                        cooldown, role, c.getUser().getName()));
             } else {
-                c.sendMessage(":x: Error: Role does already exist: \"" + args[0] + "\".").queue();
+                c.sendMessage(String.format(":x: Error: Role does already exist: \"%s\".", role)).queue();
             }
         } catch (NumberFormatException e) {
             c.sendMessage(":x: Failed to parse integer.").queue();
@@ -334,72 +340,64 @@ public class Commands {
     }
 
     public static void removeRoleMentionCooldown(PrivateChannel c, String[] args) {
-        final var controller = Controller.INSTANCE;
-        if (args.length != 1 || args[0].equals("")) {
-            c.sendMessage(":x: Not enough or too much arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 1, c)) {
             return;
         }
-        if (args[0].charAt(0) == "@".charAt(0))
-            args[0] = args[0].substring(1);
-        if (controller.configuration.removeMentionRoleCooldown(args[0])) {
-            c.sendMessage(String.format(":white_check_mark: Cooldown for role \"%s\" removed.", args[0])).queue();
+        final var controller = Controller.INSTANCE;
+        
+        final var role = args[0].charAt(0) == '@' ? args[0].substring(1) : args[0];
+        if (controller.configuration.removeMentionRoleCooldown(role)) {
+            c.sendMessage(String.format(":white_check_mark: Cooldown for role \"%s\" removed.", role)).queue();
             controller.log.addLogEntry(String.format("DiscordConnector: Cooldown for role \"%s\" removed by \"%s\".",
-                    args[0], c.getUser().getName()));
+                    role, c.getUser().getName()));
         } else {
-            c.sendMessage(":x: Error: Role does not exist: \"" + args[0] + "\".").queue();
+            c.sendMessage(String.format(":x: Error: Role does not exist: \"%s\".", role)).queue();
         }
     }
 
     public static void addManipulationRule(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 3, c)) {
+            return;
+        }
         final var controller = Controller.INSTANCE;
+
         try {
-            // Parse strings
-            final var joinedArgs = String.join(" ", args);
-            String[] arguments = joinedArgs.charAt(0) == '`' ? joinedArgs.substring(1).split("`")
-                    : new String[0];
-            if (arguments.length == 7 && !arguments[0].equals(" ") && arguments[1].equals(" ")
-                    && !arguments[2].equals(" ") && arguments[3].equals(" ") && !arguments[4].equals(" ")
-                    && arguments[5].equals(" ") && !arguments[6].equals(" ")) {
+            final var name = args[0];
+            final var pattern = args[1];
+            final var replacement = args[2];
+            final var roles = Arrays.stream(args[3].split(","))
+                    .map(s -> s.startsWith("@") ? s.substring(1) : s)
+                    .toArray(String[]::new);
 
-                // Remove @
-                String[] roles = arguments[6].split(",");
-                for (int i = 0; i < roles.length; i++) {
-                    if (roles[i].charAt(0) == "@".charAt(0))
-                        roles[i] = roles[i].substring(1);
-                }
+            // Fire
+            final var manipulationRule = new ManipulationRule(Pattern.compile(pattern), replacement, roles,
+                    c.getUser().getName(), name);
+            
+            if (controller.configuration.addManipulationRule(manipulationRule)) {
+                controller.log.addLogEntry(String.format(
+                        "DiscordConnector: New manipulation rule \"%s\" with pattern \"%s\" and replacement \"%s\" added by \"%s\" with following mentions:",
+                        manipulationRule.getName(), manipulationRule.getPattern(), manipulationRule.getReplacement(),
+                        c.getUser().getName()));
 
-                // Fire
-                final var manipulationRule = new ManipulationRule(Pattern.compile(arguments[2]), arguments[4], roles,
-                        c.getUser().getName(), arguments[0]);
-                if (controller.configuration.addManipulationRule(manipulationRule)) {
-
-                    controller.log.addLogEntry(String.format(
-                            "DiscordConnector: New manipulation rule \"%s\" with pattern \"%s\" and replacement \"%s\" added by \"%s\" with following mentions:",
-                            manipulationRule.getName(), manipulationRule.getPattern(),
-                            manipulationRule.getReplacement(), c.getUser().getName()));
-
-                    final StringBuilder sb = new StringBuilder();
-                    sb.append(String.format(
-                            ":white_check_mark: New manipulation rule `%s` with pattern `%s` and replacement `%s` successfully added and mentions the following roles:\n",
-                            manipulationRule.getName(), manipulationRule.getPattern(),
-                            manipulationRule.getReplacement()));
-                    if (manipulationRule.getRoles().isEmpty()) {
-                        sb.append("\tNo roles are mentioned\n");
-                        controller.log.addLogEntry("DiscordConnector: No roles are mentioned.");
-                    } else {
-                        for (int i = 0; i < manipulationRule.getRoles().size(); i++) {
-                            sb.append(String.format("\t@%s\n", manipulationRule.getRoles().get(i)));
-                            controller.log.addLogEntry(String.format("DiscordConnector: Mention: @%s.",
-                                    manipulationRule.getRoles().get(i)));
-                        }
-                    }
-                    c.sendMessage(sb.toString()).queue();
+                final StringBuilder sb = new StringBuilder();
+                sb.append(String.format(
+                        ":white_check_mark: New manipulation rule `%s` with pattern `%s` and replacement `%s` successfully added and mentions the following roles:\n",
+                        manipulationRule.getName(), manipulationRule.getPattern(), manipulationRule.getReplacement()));
+                
+                if (manipulationRule.getRoles().isEmpty()) {
+                    sb.append("\tNo roles are mentioned\n");
+                    controller.log.addLogEntry("DiscordConnector: No roles are mentioned.");
                 } else {
-                    c.sendMessage(":x: Error: This rule already in the list.").queue();
+                    manipulationRule.getRoles().stream()
+                    .map(s -> {
+                        controller.log.addLogEntry(String.format("DiscordConnector: Mention: %s.", s));
+                        return String.format("\t@%s\n", s);
+                    })
+                    .forEach(s -> sb.append(s));
                 }
-
+                c.sendMessage(sb.toString()).queue();
             } else {
-                c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue();
+                c.sendMessage(":x: Error: This rule already in the list.").queue();
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error, please see in log.").queue();
@@ -408,12 +406,12 @@ public class Commands {
     }
 
     public static void removeManipulationRule(PrivateChannel c, String[] args) {
-        final var controller = Controller.INSTANCE;
-        if (args.length < 1) {
-            c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue();
+        if (!assertArgLength(args, 1, c)) {
             return;
         }
-        final var name = String.join(" ", args);
+        final var controller = Controller.INSTANCE;
+        
+        final var name = args[0];
         if (controller.configuration.removeManipulationRule(name)) {
             c.sendMessage(":white_check_mark: Manipulation rule deleted.").queue();
             controller.log.addLogEntry(String.format("DiscordConnector: Manipulation rule \"%s\" removed by \"%s\".",
@@ -424,6 +422,9 @@ public class Commands {
     }
 
     public static void resolveID(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 1, c)) {
+            return;
+        }
         final var controller = Controller.INSTANCE;
         final var connector = DiscordConnector.INSTANCE;
         try {
@@ -448,39 +449,80 @@ public class Commands {
     }
 
     public static void setVersion(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 2, c)) {
+            return;
+        }
         Controller controller = Controller.INSTANCE;
         try {
-            // Parse strings
-            final var joinedArgs = String.join(" ", args);
-            String[] arguments = joinedArgs.charAt(0) == '`' ? joinedArgs.substring(1).split("`") : new String[0];
-            if (arguments.length == 3 && !arguments[0].equals(" ") && arguments[1].equals(" ")
-                    && !arguments[2].equals(" ")) {
-                final var engineBuild = Integer.parseInt(arguments[2]);
-                final var engine = arguments[0].equals("null") ? "" : arguments[0];
+            final var engineBuild = Integer.parseInt(args[0]);
+            final var engine = args[1];
 
-                controller.configuration.setEngine(engine);
-                controller.configuration.setEngineBuild(engineBuild);
-                if (engineBuild == 0 || engine.equals("")) {
-                    c.sendMessage(":white_check_mark: Clonk version requirement removed.").queue();
-                    controller.log.addLogEntry(String.format(
-                            "DiscordConnector: Clonk version requirement removed by %s.", c.getUser().getName()));
-                } else {
-                    c.sendMessage(
-                            String.format(":white_check_mark: New Clonk version requirement set: \"%s\" on build %d.",
-                                    engine, engineBuild))
-                            .queue();
-                    controller.log.addLogEntry(String.format(
-                            "DiscorConnector: New Clonk version requirement set by \"%s\" (Engine: \"%s\", Build: \"%d\").",
-                            c.getUser().getName(), engine, engineBuild));
-                }
-            } else {
-                c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue();
-            }
+            controller.configuration.setEngine(engine);
+            controller.configuration.setEngineBuild(engineBuild);
+            c.sendMessage(String.format(
+                    ":white_check_mark: New Clonk version requirement set: \"%s\" on build %d.",
+                    engine, engineBuild))
+            .queue();
+            controller.log.addLogEntry(String.format(
+                    "DiscorConnector: New Clonk version requirement set by \"%s\" (Engine: \"%s\", Build: \"%d\").",
+                    c.getUser().getName(), engine, engineBuild));
         } catch (NumberFormatException e) {
             c.sendMessage(":x: Error: Failed to parse integer.").queue();
         } catch (Exception e) {
             c.sendMessage(":x: Error, please see in log.").queue();
             controller.log.addLogEntry("DiscordConnector: Failed to set new Clonk version: ", e);
         }
+    }
+    
+    public static void removeVersion(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 0, c)) {
+            return;
+        }
+        Controller controller = Controller.INSTANCE;
+        Configuration config = controller.configuration;
+        
+        config.setEngine("");
+        config.setEngineBuild(0);
+        c.sendMessage(":white_check_mark: Clonk version requirement removed.").queue();
+        controller.log.addLogEntry(
+                String.format("DiscordConnector: Clonk version requirement removed by %s.", c.getUser().getName()));
+    }
+
+    // Helper methods
+
+    /**
+     * Asserts that the argument length is exactly the specified length.
+     * Optionally writes an error message to the channel.
+     * 
+     * @param args The argument array.
+     * @param length The length
+     * @param channel channel The channel to write an error to. May be null.
+     * @return True if the arguments are exactly the specified length.
+     */
+    private static boolean assertArgLength(String[] args, int length, PrivateChannel channel) {
+        return assertArgLength(args, length, length, channel);
+    }
+
+    /**
+     * Asserts that the argument length is between a higher and a lower bound.
+     * Optionally writes an error message to the channel.
+     * 
+     * @param args The argument array.
+     * @param lowerBound The lowest allowed length, inclusive.
+     * @param upperBound The highest allowed length, inclusive.
+     * @param channel The channel to write an error to. May be null.
+     * @return True if the arguments are between the boundaries.
+     */
+    private static boolean assertArgLength(String[] args, int lowerBound, int upperBound, PrivateChannel channel) {
+        Optional<PrivateChannel> ch = Optional.ofNullable(channel);
+        if(args.length < lowerBound) {
+            ch.ifPresent(c -> c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue());
+            return false;
+        }
+        if (args.length > upperBound) {
+            ch.ifPresent(c -> c.sendMessage(":x: Too many arguments. Type \"help\" for a list of commands.").queue());
+            return false;
+        }
+        return true;
     }
 }
