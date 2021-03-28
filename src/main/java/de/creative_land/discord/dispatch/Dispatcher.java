@@ -288,7 +288,7 @@ public class Dispatcher {
 
         final var dispatchedMessage = optionalDispatchedMessage.get();
         dispatchedMessage.getMessage().delete().queue(
-                deletedMessage -> dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.markAsDeleted()),
+                deletedMessage -> dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.markAsDeleted(gameReference)),
                 failure -> dispatchFailure(gameReference, failure, BuildAction.DELETE)
         );
         return true;

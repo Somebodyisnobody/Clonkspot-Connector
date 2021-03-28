@@ -28,8 +28,14 @@ public class DispatchedMessage {
 
     private final OffsetDateTime created;
 
+    /**
+     * The last message which was sent to discord. When parent object is marked as deleted last message is not updated.
+     */
     private Message message;
 
+    /**
+     * The last game reference which caused an action on discord.
+     */
     private GameReference gameReference;
 
     private boolean deleted;
@@ -64,7 +70,8 @@ public class DispatchedMessage {
         return this;
     }
 
-    public DispatchedMessage markAsDeleted() {
+    public DispatchedMessage markAsDeleted(@NotNull GameReference gameReference) {
+        this.gameReference = gameReference;
         this.deleted = true;
         return this;
     }
