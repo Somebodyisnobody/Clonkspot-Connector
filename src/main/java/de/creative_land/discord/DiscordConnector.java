@@ -25,6 +25,8 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.ChunkingFilter;
 
 import javax.security.auth.login.LoginException;
 
@@ -71,6 +73,8 @@ public class DiscordConnector {
     private void createJda(String apiKey) throws LoginException {
         JDABuilder builder = JDABuilder.createDefault(apiKey);
         builder.addEventListeners(new ChatListener());
+        builder.setChunkingFilter(ChunkingFilter.ALL);
+        builder.enableIntents(GatewayIntent.GUILD_MEMBERS);
         jda = builder.build();
     }
 

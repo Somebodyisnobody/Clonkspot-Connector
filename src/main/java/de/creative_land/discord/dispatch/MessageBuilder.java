@@ -18,14 +18,23 @@
 
 package de.creative_land.discord.dispatch;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.creative_land.Controller;
 import de.creative_land.clonkspot.model.GameReference;
 import de.creative_land.discord.DiscordConnector;
 import net.dv8tion.jda.api.entities.Role;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,11 +43,29 @@ public class MessageBuilder {
 
     private final HashMap<String, OffsetDateTime> mentionedRoles;
 
+    private final HashSet<Integer> blacklistedReferences;
+
+    private final List<String> blacklistedKeywords;
+
     private final String joinUrl;
 
     public MessageBuilder() {
         this.mentionedRoles = new HashMap<>();
+        this.blacklistedReferences = new HashSet<>();
         this.joinUrl = Controller.INSTANCE.configuration.getJoinUrl();
+
+        List<String> readLines = new ArrayList<>();
+        try {
+            if (new File(System.getProperty("user.dir") + File.separator + "blacklistedKeywords.txt").createNewFile()) {
+                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Created \"blacklistedKeywords.txt\". Write down here blacklisted keywords per line in lowercase.");
+            } else {
+                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Importing from disk: " + System.getProperty("user.dir") + File.separator + "blacklistedKeywords.txt");
+                readLines = Files.readAllLines(Paths.get(System.getProperty("user.dir") + File.separator + "blacklistedKeywords.txt"));
+            }
+        } catch (IOException e) {
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed read in blacklistedKeywords:", e);
+        }
+        this.blacklistedKeywords = readLines;
     }
 
     /**
@@ -68,6 +95,9 @@ public class MessageBuilder {
             Controller.INSTANCE.log.addLogEntry("DiscordConnector: Code injection: " + gameReference.id + " (Hostname: \"" + gameReference.hostname + "\", Title: \"" + gameReference.title + "\").");
             return null;
         }
+
+        //Find specific blacklisted keywords
+        if (checkAgainstBlacklist(gameReference, title)) return null;
 
 
         //Find and apply manipulation rule
@@ -265,4 +295,57 @@ public class MessageBuilder {
         }
         return null;
     }
+
+    /**
+     * Checks if the reference contains blacklisted keywords.
+     *
+     * @param gameReference the parsed game reference.
+     * @param title         preprocessed title with removed markup.
+     * @return true if the game reference contains blacklisted words or the reference id was marked as blacklisted before, otherwise false.
+     */
+    private boolean checkAgainstBlacklist(GameReference gameReference, String title) {
+
+        if (!blacklistedReferences.contains(gameReference.id)) {
+
+            //Remember keyword for later
+            final var matchedKeyword = blacklistedKeywords.stream().filter((title + " " + gameReference.hostname).toLowerCase()::contains).findFirst();
+
+            if (matchedKeyword.isPresent()) {
+                ObjectMapper mapper = new ObjectMapper();
+
+                try {
+                    Controller.INSTANCE.log.addLogEntry("DiscordConnector: Reference matched blacklisted entry \"" + matchedKeyword.get() + "\": " + mapper.writeValueAsString(gameReference));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
+
+                //Filter all members of this guild which have the admin role
+                final var adminRole = DiscordConnector.INSTANCE.getAdminRole();
+                adminRole.getGuild().getMembersWithRoles(adminRole).forEach(
+                        member -> member.getUser().openPrivateChannel().queue(
+                                success -> {
+                                    //Send every admin a message
+                                    try {
+                                        final String message = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(gameReference);
+                                        if (message.length() < 1900) {
+                                            success.sendMessage("Reference matched blacklisted entry \"" + matchedKeyword.get() + "\": \n```\n" + message + "\n```").queue();
+                                        } else {
+                                            success.sendFile(("Reference matched blacklisted entry \"" + matchedKeyword.get() + "\": \n" + message).getBytes(StandardCharsets.UTF_8), "blacklisted entry.txt").queue();
+                                        }
+                                    } catch (JsonProcessingException e) {
+                                        Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to send blacklist notification" + gameReference.id + " to user \"" + member.getNickname() + "\"", e);
+                                    }
+                                },
+                                failure -> Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to send blacklist notification for " + gameReference.id + " for user \"" + member.getNickname() + "\"", failure)
+                        )
+                );
+                blacklistedReferences.add(gameReference.id);
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
 }
+
+
