@@ -44,15 +44,16 @@ public class Controller {
         this.log = new Log();
         //JSON from file to Object
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            Controller.INSTANCE.log.addLogEntry("Controller: Importing from disk: " + System.getProperty("user.dir") + File.separator + "config.json");
-            configuration = mapper.readValue(new File(System.getProperty("user.dir") + File.separator + "config.json"), Configuration.class);
+            if (new File(System.getProperty("user.dir") + File.separator + "config.json").exists()) {
+                ObjectMapper mapper = new ObjectMapper();
+                Controller.INSTANCE.log.addLogEntry("Controller: Importing from disk: " + System.getProperty("user.dir") + File.separator + "config.json");
+                configuration = mapper.readValue(new File(System.getProperty("user.dir") + File.separator + "config.json"), Configuration.class);
+            } else {
+                Controller.INSTANCE.log.addLogEntry("Controller: Using new configuration file (Is saved, when the discord login was successful).");
+                configuration = new Configuration(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+            }
         } catch (IOException e) {
             Controller.INSTANCE.log.addLogEntry(e);
-        }
-        if (configuration == null) {
-            Controller.INSTANCE.log.addLogEntry("Controller: Using new configuration file (Is saved, when the discord login was successful).");
-            configuration = new Configuration(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         }
 
         //Configure global settings
