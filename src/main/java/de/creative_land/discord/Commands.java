@@ -20,6 +20,7 @@ package de.creative_land.discord;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import de.creative_land.Configuration;
 import de.creative_land.Controller;
 import de.creative_land.IgnoredHostname;
@@ -38,12 +39,12 @@ import java.util.regex.Pattern;
 /**
  * A static collection of methods to serve as entry point for external commands.
  * Methods in this class should be seen in isolation.
- * 
  */
 public class Commands {
 
     /* Do not instantiate */
-    private Commands() {}
+    private Commands() {
+    }
 
 
     //Entry points
@@ -320,7 +321,7 @@ public class Commands {
         try {
             final var role = args[0].charAt(0) == '@' ? args[0].substring(1) : args[0];
             final var cooldown = Integer.parseInt(args[1]);
-            
+
             if (controller.configuration
                     .addMentionRoleCooldown(new MentionRoleCooldown(role, cooldown, c.getUser().getName()))) {
                 c.sendMessage(String.format(
@@ -343,7 +344,7 @@ public class Commands {
             return;
         }
         final var controller = Controller.INSTANCE;
-        
+
         final var role = args[0].charAt(0) == '@' ? args[0].substring(1) : args[0];
         if (controller.configuration.removeMentionRoleCooldown(role)) {
             c.sendMessage(String.format(":white_check_mark: Cooldown for role \"%s\" removed.", role)).queue();
@@ -371,7 +372,7 @@ public class Commands {
             // Fire
             final var manipulationRule = new ManipulationRule(Pattern.compile(pattern), replacement, roles,
                     c.getUser().getName(), name);
-            
+
             if (controller.configuration.addManipulationRule(manipulationRule)) {
                 controller.log.addLogEntry(String.format(
                         "DiscordConnector: New manipulation rule \"%s\" with pattern \"%s\" and replacement \"%s\" added by \"%s\" with following mentions:",
@@ -382,17 +383,17 @@ public class Commands {
                 sb.append(String.format(
                         ":white_check_mark: New manipulation rule `%s` with pattern `%s` and replacement `%s` successfully added and mentions the following roles:\n",
                         manipulationRule.getName(), manipulationRule.getPattern(), manipulationRule.getReplacement()));
-                
+
                 if (manipulationRule.getRoles().isEmpty()) {
                     sb.append("\tNo roles are mentioned\n");
                     controller.log.addLogEntry("DiscordConnector: No roles are mentioned.");
                 } else {
                     manipulationRule.getRoles().stream()
-                    .map(s -> {
-                        controller.log.addLogEntry(String.format("DiscordConnector: Mention: %s.", s));
-                        return String.format("\t@%s\n", s);
-                    })
-                    .forEach(s -> sb.append(s));
+                            .map(s -> {
+                                controller.log.addLogEntry(String.format("DiscordConnector: Mention: %s.", s));
+                                return String.format("\t@%s\n", s);
+                            })
+                            .forEach(s -> sb.append(s));
                 }
                 c.sendMessage(sb.toString()).queue();
             } else {
@@ -409,7 +410,7 @@ public class Commands {
             return;
         }
         final var controller = Controller.INSTANCE;
-        
+
         final var name = args[0];
         if (controller.configuration.removeManipulationRule(name)) {
             c.sendMessage(":white_check_mark: Manipulation rule deleted.").queue();
@@ -431,8 +432,14 @@ public class Commands {
                     .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == Integer.parseInt(args[0]))
                     .findFirst();
             if (gameReference.isPresent()) {
-                ObjectMapper mapper = new ObjectMapper();
-                c.sendMessage(mapper.writeValueAsString(gameReference.get().getGameReference())).queue();
+                final ObjectWriter writer = new ObjectMapper().writerWithDefaultPrettyPrinter();
+
+                final String formattedGameReference = writer.writeValueAsString(gameReference.get().getGameReference());
+                if (formattedGameReference.length() < 1900) {
+                    c.sendMessage(String.format("```\n%s\n```", formattedGameReference)).queue();
+                } else {
+                    c.sendFile(formattedGameReference.getBytes(StandardCharsets.UTF_8), "game reference.txt").queue();
+                }
             } else {
                 c.sendMessage(
                         "No game reference matched that id. It was not dispatched or is no longer available in cache.")
@@ -461,7 +468,7 @@ public class Commands {
             c.sendMessage(String.format(
                     ":white_check_mark: New Clonk version requirement set: \"%s\" on build %d.",
                     engine, engineBuild))
-            .queue();
+                    .queue();
             controller.log.addLogEntry(String.format(
                     "DiscorConnector: New Clonk version requirement set by \"%s\" (Engine: \"%s\", Build: \"%d\").",
                     c.getUser().getName(), engine, engineBuild));
@@ -472,7 +479,7 @@ public class Commands {
             controller.log.addLogEntry("DiscordConnector: Failed to set new Clonk version: ", e);
         }
     }
-    
+
     public static void removeVersion(PrivateChannel c, String[] args) {
         if (!assertArgLength(args, 0, c)) {
             return;
@@ -492,9 +499,9 @@ public class Commands {
     /**
      * Asserts that the argument length is exactly the specified length.
      * Optionally writes an error message to the channel.
-     * 
-     * @param args The argument array.
-     * @param length The length
+     *
+     * @param args    The argument array.
+     * @param length  The length
      * @param channel channel The channel to write an error to. May be null.
      * @return True if the arguments are exactly the specified length.
      */
@@ -505,16 +512,16 @@ public class Commands {
     /**
      * Asserts that the argument length is between a higher and a lower bound.
      * Optionally writes an error message to the channel.
-     * 
-     * @param args The argument array.
+     *
+     * @param args       The argument array.
      * @param lowerBound The lowest allowed length, inclusive.
      * @param upperBound The highest allowed length, inclusive.
-     * @param channel The channel to write an error to. May be null.
+     * @param channel    The channel to write an error to. May be null.
      * @return True if the arguments are between the boundaries.
      */
     private static boolean assertArgLength(String[] args, int lowerBound, int upperBound, PrivateChannel channel) {
         Optional<PrivateChannel> ch = Optional.ofNullable(channel);
-        if(args.length < lowerBound) {
+        if (args.length < lowerBound) {
             ch.ifPresent(c -> c.sendMessage(":x: Not enough arguments. Type \"help\" for a list of commands.").queue());
             return false;
         }
