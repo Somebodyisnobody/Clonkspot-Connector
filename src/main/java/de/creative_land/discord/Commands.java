@@ -486,8 +486,8 @@ public class Commands {
         }
         Controller controller = Controller.INSTANCE;
         Configuration config = controller.configuration;
-        
-        config.setEngine("");
+
+        config.setEngine(null);
         config.setEngineBuild(0);
         c.sendMessage(":white_check_mark: Clonk version requirement removed.").queue();
         controller.log.addLogEntry(
