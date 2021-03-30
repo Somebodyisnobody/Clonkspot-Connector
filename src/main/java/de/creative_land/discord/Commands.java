@@ -18,15 +18,8 @@
 
 package de.creative_land.discord;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.regex.Pattern;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import de.creative_land.Configuration;
 import de.creative_land.Controller;
 import de.creative_land.IgnoredHostname;
@@ -35,6 +28,12 @@ import de.creative_land.discord.dispatch.MentionRoleCooldown;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.PrivateChannel;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * A static collection of methods to serve as entry point for external commands.
@@ -356,7 +355,7 @@ public class Commands {
     }
 
     public static void addManipulationRule(PrivateChannel c, String[] args) {
-        if (!assertArgLength(args, 3, c)) {
+        if (!assertArgLength(args, 4, c)) {
             return;
         }
         final var controller = Controller.INSTANCE;
