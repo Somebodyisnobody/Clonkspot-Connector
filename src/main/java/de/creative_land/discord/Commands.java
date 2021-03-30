@@ -460,8 +460,8 @@ public class Commands {
         }
         Controller controller = Controller.INSTANCE;
         try {
-            final var engineBuild = Integer.parseInt(args[0]);
-            final var engine = args[1];
+            final var engine = args[0];
+            final var engineBuild = Integer.parseInt(args[1]);
 
             controller.configuration.setEngine(engine);
             controller.configuration.setEngineBuild(engineBuild);
