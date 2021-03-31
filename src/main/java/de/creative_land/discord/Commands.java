@@ -272,7 +272,7 @@ public class Commands {
     }
 
     public static void addIgnoredHost(PrivateChannel c, String[] args) {
-        if (!assertArgLength(args, 2, c)) {
+        if (!assertArgLength(args, 3, c)) {
             return;
         }
         final var controller = Controller.INSTANCE;
