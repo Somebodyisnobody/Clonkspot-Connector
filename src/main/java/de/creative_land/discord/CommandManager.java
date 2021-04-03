@@ -18,76 +18,114 @@
 
 package de.creative_land.discord;
 
-import de.creative_land.Command;
 import de.creative_land.Controller;
-import de.creative_land.discord.commands.*;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
+import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+/**
+ * Maintains a list of all commands available via Discord.
+ * 
+ */
 public class CommandManager {
-    public final LinkedHashMap<Command, ServerCommand> commands;
 
+    /** A map of command key to command. */
+    private final Map<String, Command> commands;
+
+    /**
+     * Constructs a new command manager.
+     */
     public CommandManager() {
-        this.commands = new LinkedHashMap<>();
+        this.commands = new HashMap<>();
 
-        this.commands.put(Command.STOP, new StopCommand());
-        this.commands.put(Command.START, new StartCommand());
-        this.commands.put(Command.LOG, new LogCommand());
-        this.commands.put(Command.ADDNOTICE, new AddNoticeCommand());
-        this.commands.put(Command.CONFIG, new ConfigCommand());
-        this.commands.put(Command.TARGETCHANNEL, new TargetChannelCommand());
-        this.commands.put(Command.NEWNAME, new NewNameCommand());
-        this.commands.put(Command.HOSTCOOLDOWN, new HostCooldownCommand());
-        this.commands.put(Command.ADDIGNOREDHOST, new AddIgnoredHostCommand());
-        this.commands.put(Command.REMOVEIGNOREDHOST, new RemoveIgnoredHostCommand());
-        this.commands.put(Command.ADDMENTIONROLECOOLDOWN, new AddMentionRoleCooldownCommand());
-        this.commands.put(Command.REMOVEMENTIONROLECOOLDOWN, new RemoveMentionRoleCooldownCommand());
-        this.commands.put(Command.ADDMANIPULATIONRULE, new AddManipulationRuleCommand());
-        this.commands.put(Command.REMOVEMANIPULATIONRULE, new RemoveManipulationRuleCommand());
-        this.commands.put(Command.RESOLVEID, new ResolveIdCommand());
-        this.commands.put(Command.CLONKVERSION, new ClonkVersionCommand());
+        registerCommand("help", List.of(), "Prints this help message.", this::printHelp);
+
+        registerCommand("stop", List.of(), "Starts the service.", Commands::stop);
+
+        registerCommand("start", List.of(), "Stops the service.", Commands::start);
+
+        registerCommand("log", List.of(), "Prints the log.", Commands::log);
+
+        registerCommand("addnotice", List.of("string"), "Inserts a notice into the log.", Commands::notice);
+
+        registerCommand("config", List.of(), "Prints the current configuration.", Commands::config);
+
+        registerCommand("targetchannel", List.of("channel name"), "Sets a new target channel.",
+                Commands::targetChannel);
+
+        registerCommand("newname", List.of("name"), "Sets a new name for the bot.", Commands::newName);
+
+        registerCommand("hostcooldown", List.of("minutes"), "Sets a new general host cooldown for all hosts.",
+                Commands::setHostCooldown);
+
+        registerCommand("addignoredhost", List.of("mininum players", "hostname", "reason"),
+                "Ignores a host if the number of players isn't reached (case-sensitive).", Commands::addIgnoredHost);
+
+        registerCommand("removeignoredhost", List.of("hostname"),
+                "Removes a host from the the ignored hosts list (case-sensitive).", Commands::removeIgnoredHost);
+
+        registerCommand("addmentionrolecooldown", List.of("role", "minutes"),
+                "Adds a cooldown for a role mention (case-sensitive).", Commands::addRoleMentionCooldown);
+
+        registerCommand("removementionrolecooldown", List.of("role"),
+                "Removes an existing cooldown for role mention (case-sensitive).", Commands::removeRoleMentionCooldown);
+
+        registerCommand("addmanipulationrule", List.of("name", "pattern", "replacement", "roles"),
+                "Manipulating game titles and mention roles (replacement = regex capture group).",
+                Commands::addManipulationRule);
+
+        registerCommand("removemanipulationrule", List.of("name"), "Removes an existing manipulation rule.",
+                Commands::removeManipulationRule);
+
+        registerCommand("resolveid", List.of("id"), "Resolves a dispatched game reference by id.", Commands::resolveID);
+
+        registerCommand("clonkversion", List.of("engine", "build version"),
+                "Sets a new Clonk version for the bot which must match on new refrences.",
+                Commands::setVersion);
+        
+        registerCommand("removeversion", List.of(), "Removes the clonk version constraint on the bot.",
+                Commands::removeVersion);
+    }
+
+    /**
+     * Registers a new command
+     *
+     * @param key  The key that is used to invoke this command.
+     * @param args An array of named arguments used for the help display.
+     * @param help The help message explaining the purpose of this command.
+     * @param fn   The function to invoke when this command is called.
+     */
+    private void registerCommand(String key, List<String> args, String help, BiConsumer<PrivateChannel, String[]> fn) {
+        commands.put(key, Command.of(key, args, help, fn));
     }
 
     /**
      * Selects and runs the right command.
      *
-     * @param command full command string.
+     * @param string  full command string.
      * @param channel the user ({@link PrivateChannel}) who issued the command.
      */
-    public void selectAndPerformCommand(String command, PrivateChannel channel) {
-
-        int delimiter = command.indexOf(' ');
-        String name = delimiter > 0 ? command.substring(0, delimiter) : command;
-        String[] arguments = delimiter > 0 ? command.substring(delimiter + 1).split(" ") : new String[0];
-
-        ServerCommand serverCommand = null;
+    public void selectAndPerformCommand(String string, PrivateChannel channel) {
+        String[] values;
         try {
-            serverCommand = commands.get(Command.valueOf(name.toUpperCase()));
-        } catch (IllegalArgumentException ignored) {
-        }
-        if (serverCommand != null) {
-            serverCommand.performCommand(channel, arguments);
-        } else if (name.equalsIgnoreCase("help")) {
-            final var message = "Available commands:\n" + commands.keySet().stream().map(Command::toString).collect(Collectors.joining("\n"));
-            try {
-                if (message.length() < 2000) {
-                    channel.sendMessage("```\n" + message + "\n```").queue();
-                } else {
-                    channel.sendFile(message.getBytes(StandardCharsets.UTF_8), "help.txt").queue();
-                }
-            } catch (Exception e) {
-                channel.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
-                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to print help command: ", e);
-            }
-
-        } else {
-            channel.sendMessage("Command not found. Type \"help\" for a list of commands.").queue();
+            values = CommandParser.parse(string);
+        } catch (MalformedStringException e) {
+            channel.sendMessage(String.format("Unable to parse command: %s", e.getMessage())).queue();
+            return;
         }
 
+        String key = values[0];
+        String[] args = Arrays.copyOfRange(values, 1, values.length);
+
+        var command = Optional.ofNullable(commands.get(key))
+                .orElseGet(() -> Command.of("invalid", List.of(), "Invalid command message.",
+                        (c, a) -> c.sendMessage("Command not found. Type \"help\" for a list of commands.").queue()));
+
+        command.fn.accept(channel, args);
     }
 
     /**
@@ -103,5 +141,72 @@ public class CommandManager {
             }
         }
         return false;
+    }
+
+    /**
+     * Formats a help message with all registered commands and outputs it to the
+     * specified channel.
+     *
+     * @param c    The channel.
+     * @param args The arguments.
+     */
+    private void printHelp(PrivateChannel c, String[] args) {
+        final var message = "Available commands:\n" + commands.values().stream()
+                .map(s -> {
+                    String a = s.args.isEmpty() ? "" : s.args.stream().collect(Collectors.joining("> <", "<", ">"));
+                    return String.format("%-30s %-40s %s", s.key, a, s.help);
+                }).collect(Collectors.joining("\n"));
+        try {
+            if (message.length() < 2000) {
+                c.sendMessage("```\n" + message + "\n```").queue();
+            } else {
+                c.sendFile(message.getBytes(StandardCharsets.UTF_8), "help.txt").queue();
+            }
+        } catch (Exception e) {
+            c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to print help command: ", e);
+        }
+    }
+
+    /**
+     * Small helper class to collect all information about a command
+     */
+    private static class Command {
+        /**
+         * the key
+         */
+        public final String key;
+
+        /**
+         * the arguments
+         */
+        public final List<String> args;
+
+        /**
+         * the help message
+         */
+        public final String help;
+
+        /**
+         * The function
+         */
+        public final BiConsumer<PrivateChannel, String[]> fn;
+
+        /**
+         * constructor
+         */
+        private Command(String key, List<String> args, String help, BiConsumer<PrivateChannel, String[]> fn) {
+            this.key = key;
+            this.args = args;
+            this.help = help;
+            this.fn = fn;
+        }
+
+        /**
+         * Builds a new command object
+         */
+        public static Command of(String key, List<String> args, String help, BiConsumer<PrivateChannel, String[]> fn) {
+            return new Command(key, args, help, fn);
+        }
     }
 }
