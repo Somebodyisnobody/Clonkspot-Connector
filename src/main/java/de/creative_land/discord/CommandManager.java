@@ -23,11 +23,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -118,7 +114,7 @@ public class CommandManager {
         try {
             values = CommandParser.parse(string);
         } catch (MalformedStringException e) {
-            channel.sendMessage(String.format("Unable to parse command: %s", e.getMessage())).queue();;
+            channel.sendMessage(String.format("Unable to parse command: %s", e.getMessage())).queue();
             return;
         }
 
@@ -158,7 +154,7 @@ public class CommandManager {
         final var message = "Available commands:\n" + commands.values().stream()
                 .map(s -> {
                     String a = s.args.isEmpty() ? "" : s.args.stream().collect(Collectors.joining("> <", "<", ">"));
-                    return String.format("%-30s %-30s %s", s.key, a, s.help);
+                    return String.format("%-30s %-40s %s", s.key, a, s.help);
                 }).collect(Collectors.joining("\n"));
         try {
             if (message.length() < 2000) {
