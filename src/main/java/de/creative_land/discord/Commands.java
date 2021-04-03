@@ -122,6 +122,9 @@ public class Commands {
     }
 
     public static void config(PrivateChannel c, String[] args) {
+        if (!assertArgLength(args, 0, c)) {
+            return;
+        }
         final var connector = DiscordConnector.INSTANCE;
         final var controller = Controller.INSTANCE;
         final var conf = controller.configuration;
@@ -240,7 +243,6 @@ public class Commands {
         final var controller = Controller.INSTANCE;
         final String name = args[0];
         try {
-            //TODO: newname doesn't work after failure has been processed for further
             connector.getJda().getSelfUser().getManager().setName(name).queue(
                     success -> {
                         c.sendMessage(":white_check_mark: New name set.").queue();
