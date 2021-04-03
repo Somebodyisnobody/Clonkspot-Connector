@@ -233,12 +233,9 @@ public class Commands {
     }
 
     public static void newName(PrivateChannel c, String[] args) {
-        if (!assertArgLength(args, 1, c)) {
-            return;
-        }
         final var connector = DiscordConnector.INSTANCE;
         final var controller = Controller.INSTANCE;
-        final String name = args[0];
+        final String name = String.join(" ", args);
         try {
             connector.getJda().getSelfUser().getManager().setName(name).queue(
                     success -> {
