@@ -208,9 +208,7 @@ public class Commands {
         }
         final var connector = DiscordConnector.INSTANCE;
         final var controller = Controller.INSTANCE;
-        if (args[0].charAt(0) == '#')
-            args[0] = args[0].substring(1);
-        final var textChannels = connector.getJda().getTextChannelsByName(args[0], true);
+        final var textChannels = connector.getJda().getTextChannelsByName(args[0].charAt(0) == '#' ? args[0].substring(1) : args[0], true);
         if (textChannels.isEmpty()) {
             c.sendMessage(":x: Channel not found.").queue();
         } else if (textChannels.size() > 1) {
