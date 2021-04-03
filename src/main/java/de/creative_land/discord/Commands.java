@@ -112,12 +112,9 @@ public class Commands {
     }
 
     public static void notice(PrivateChannel c, String[] args) {
-        if (!assertArgLength(args, 1, c)) {
-            return;
-        }
         final var controller = Controller.INSTANCE;
         controller.log
-                .addLogEntry(String.format("Notice from \"%s\": %s", c.getUser().getName(), args[0]));
+                .addLogEntry(String.format("Notice from \"%s\": %s", c.getUser().getName(), String.join(" ", args)));
         c.sendMessage(":white_check_mark: Notice successfully stored in the log.").queue();
     }
 
