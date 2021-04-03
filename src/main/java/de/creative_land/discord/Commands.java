@@ -240,12 +240,20 @@ public class Commands {
         }
         final var connector = DiscordConnector.INSTANCE;
         final var controller = Controller.INSTANCE;
-        String name = args[0];
+        final String name = args[0];
         try {
-            connector.getJda().getSelfUser().getManager().setName(name).queue();
-            c.sendMessage(":white_check_mark: New name set.").queue();
-            controller.log.addLogEntry(String.format("DiscordConnector: New name set by \"%s\" (Name: \"%s\").",
-                    c.getUser().getName(), name));
+            //TODO: newname doesn't work after failure has been processed for further
+            connector.getJda().getSelfUser().getManager().setName(name).queue(
+                    success -> {
+                        c.sendMessage(":white_check_mark: New name set.").queue();
+                        controller.log.addLogEntry(String.format("DiscordConnector: New name set by \"%s\" (Name: \"%s\").",
+                                c.getUser().getName(), name));
+                    },
+                    failure -> {
+                        c.sendMessage(":x: Error: " + failure.getClass().getName() + ", " + failure.getMessage()).queue();
+                        controller.log.addLogEntry("DiscordConnector: Failed to set new bot name: ", failure);
+                    }
+            );
         } catch (IllegalArgumentException e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
         }
