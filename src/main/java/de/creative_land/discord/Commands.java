@@ -77,9 +77,10 @@ public class Commands {
         final var connector = DiscordConnector.INSTANCE;
         final var controller = Controller.INSTANCE;
         final var jdaPresence = connector.getJda().getPresence();
+
         if (Objects.equals(jdaPresence.getActivity(),
                 Activity.watching(de.creative_land.discord.Activity.RUNNING.toString()))) {
-            c.sendMessage(":x: Service already started. New games will be announced when they appear on clonkspot.")
+            c.sendMessage(":x: Service already started. New games will be announced when new events are received.")
                     .queue();
         } else if (Objects.equals(connector.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             c.sendMessage(":x: Error, please see in log.").queue();
@@ -88,7 +89,7 @@ public class Commands {
             controller.log
                     .addLogEntry(String.format("DiscordConnector: Service started by \"%s\".", c.getUser().getName()));
             c.sendMessage(
-                    ":white_check_mark: Started the service. New games will be announced when they appear on clonkspot.")
+                    ":white_check_mark: Started the service. New games will be announced when new events are received.")
                     .queue();
         }
     }
