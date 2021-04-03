@@ -260,7 +260,7 @@ public class Commands {
             final var oldCooldown = controller.configuration.getHostCooldown();
             final var newCooldown = Integer.parseInt(args[0]);
             controller.configuration.setHostCooldown(newCooldown);
-            c.sendMessage(String.format(":white_check_mark: Host cooldown set from %d to %d", oldCooldown, newCooldown))
+            c.sendMessage(String.format(":white_check_mark: Host cooldown set from %d minutes to %d minutes.", oldCooldown, newCooldown))
                     .queue();
             controller.log.addLogEntry(
                     String.format("DiscordConnector: New host cooldown set from %d minutes to %d minutes by \"%s\".",
