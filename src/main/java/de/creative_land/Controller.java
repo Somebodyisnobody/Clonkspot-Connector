@@ -172,7 +172,7 @@ public class Controller {
                     if (line.equalsIgnoreCase("exit")) {
                         DiscordConnector.INSTANCE.getJda().getPresence().setStatus(OnlineStatus.OFFLINE);
                         DiscordConnector.INSTANCE.getJda().shutdown();
-                        ClonkspotConnector.INSTANCE.sse.close();
+                        ClonkspotConnector.INSTANCE.close();
                         System.out.println("Issued shutdown by console");
                         break;
                     } else if (line.equalsIgnoreCase("help")) {

@@ -18,43 +18,90 @@
 
 package de.creative_land.clonkspot;
 
-import com.here.oksse.OkSse;
-import com.here.oksse.ServerSentEvent;
-import de.creative_land.Controller;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import de.creative_land.Controller;
+import de.creative_land.sse.SSEListener;
+import de.creative_land.sse.SSEParser;
 
 public class ClonkspotConnector {
     public static ClonkspotConnector INSTANCE;
 
-    private final Request request;
+    private SSEListener listener;
 
-    private final OkSse okSse;
+    private SSEParser parser;
+    
+    private CompletableFuture<HttpResponse<Void>> result;
 
-    private final SseListener listener;
+    private final HttpClient client;
 
-    public ServerSentEvent sse;
+    private final HttpRequest request;
 
     public ClonkspotConnector() {
         INSTANCE = this;
 
-        listener = new SseListener();
+        client = HttpClient.newHttpClient();
 
-        @SuppressWarnings("unused")
-        OkHttpClient client = new OkHttpClient.Builder().readTimeout(200, TimeUnit.SECONDS).build();
-        //OkSse okSse = new OkSse(client);
-        okSse = new OkSse();
-        request = new Request.Builder().url(Controller.INSTANCE.configuration.getSseEndpoint()).build();
-        startSse();
+        request = HttpRequest.newBuilder()
+                .uri(URI.create(Controller.INSTANCE.configuration.getSseEndpoint()))
+                .build();
+        start();
     }
 
     /**
      * Creates a new SSE-Client and overwrites an old one.
      */
-    protected void startSse() {
-        sse = okSse.newServerSentEvent(request, listener);
+    protected void start() {
+        if (parser != null) {
+            parser.close();
+        }
+        if(result != null) {
+            result.cancel(true);
+        }
+        listener = new SseListener();
+        parser = new SSEParser(2000);
+        parser.setListener(listener);
+        result = client.sendAsync(request, BodyHandlers.fromLineSubscriber(parser));
+        result.exceptionally(e -> {
+            listener.onError(e);
+            return null;
+        });
+        result.thenAccept(r -> listener.onComplete());
+        
+        listener.onOpen();
     }
 
+    /**
+     * Tries to restart the sse client obeying the timeout specified by the server.
+     */
+    public void restart() {
+        Instant now = Instant.now();
+        Instant target = now.plus(parser.getTimeout(), ChronoUnit.MILLIS);
+        while (now.isBefore(target)) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(Duration.between(now, target).toMillis());
+            } catch (InterruptedException ignored) {
+            }
+            now = Instant.now();
+        }
+        start();
+    }
+
+    /**
+     * Closes this connection.
+     */
+    public void close() {
+        if(parser != null) {
+            parser.close();
+        }
+    }
 }

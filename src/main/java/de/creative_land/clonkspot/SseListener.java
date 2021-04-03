@@ -18,96 +18,163 @@
 
 package de.creative_land.clonkspot;
 
-import com.here.oksse.ServerSentEvent;
 import de.creative_land.Controller;
 import de.creative_land.discord.DiscordConnector;
+import de.creative_land.sse.SSEListener;
+import de.creative_land.sse.SSEMessage;
 import net.dv8tion.jda.api.OnlineStatus;
-import okhttp3.Request;
-import okhttp3.Response;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public class SseListener implements ServerSentEvent.Listener {
+public class SseListener implements SSEListener {
+    
+    private static final Duration TIMEOUT = Duration.of(3, ChronoUnit.MINUTES); //TODO move to config
 
-    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES, new ArrayBlockingQueue<>(50));
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES,
+            new ArrayBlockingQueue<>(50));
+
+    private final Timer timer = new Timer(true);
+    private Optional<TimerTask> task = Optional.empty();
+    private Instant lastMessage = Instant.now();
 
     int errorCounter = 0;
     boolean firstStart = true;
 
     @Override
-    public void onOpen(ServerSentEvent sse, Response response) {
-        //Avoid spamming when channel reopens. Message will be sent only once.
+    public void onOpen() {
+        // Avoid spamming when channel reopens. Message will be sent only once.
         if (firstStart) {
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE channel opened.");
             firstStart = false;
         }
 
-        if (errorCounter >= 10 && Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
+        if (errorCounter >= 10 && Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(),
+                OnlineStatus.DO_NOT_DISTURB)) {
             DiscordConnector.INSTANCE.status.setRunning();
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: Clonkspot is back!");
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: RUNNING.");
         }
 
-        //reset errorCounter on successful connect
+        // reset errorCounter on successful connect
         errorCounter = 0;
+        
+        synchronized (lastMessage) {
+            task.ifPresent(TimerTask::cancel);
+            task = Optional.of(toTask(this::tryTimeout));
+            lastMessage = Instant.now();
+            task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+        }
     }
 
     @Override
-    public void onMessage(ServerSentEvent sse, String id, String event, String message) {
+    public void onMessage(SSEMessage msg) {
+        synchronized(lastMessage) {
+            lastMessage = Instant.now();
+            if (task.map(TimerTask::cancel).orElse(true)) {
+                //task was cancelled or never scheduled
+                task = Optional.of(toTask(this::tryTimeout));
+                task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+            } else {
+                //task is running or has ran already
+                //we are restarting so abort
+                return;
+            }
+        }
+        
         try {
-            executor.execute(() -> DiscordConnector.INSTANCE.dispatcher.process(message, event));
-        } catch (Exception e) {
+            executor.execute(() -> DiscordConnector.INSTANCE.dispatcher.process(msg.data, msg.event));
+        } catch (RejectedExecutionException e) {
             Controller.INSTANCE.log.addLogEntry(e);
         }
     }
 
     @Override
-    public void onComment(ServerSentEvent sse, String comment) {
-        System.out.println("ClonkspotConnector: SSE comment received.");
+    public void onComplete() {
+        synchronized(timer) {
+            lastMessage = Instant.now();
+            if (task.map(TimerTask::cancel).orElse(true)) {
+                //task was cancelled or never scheduled
+                task = Optional.of(toTask(this::tryTimeout));
+                task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+            } else {
+                //task is running or has ran already
+                //we are restarting so abort
+                return;
+            }
+        }
+        Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE channel closed.");
+        if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
+            DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
+            Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: ERROR_UPSTREAM_OFFLINE.");
+        }
+        ClonkspotConnector.INSTANCE.restart();
     }
 
     @Override
-    public boolean onRetryTime(ServerSentEvent sse, long milliseconds) {
-        System.out.println("ClonkspotConnector: SSE retry time.");
-        return false;
-    }
-
-    @Override
-    public boolean onRetryError(ServerSentEvent sse, Throwable throwable, Response response) {
+    public void onError(Throwable error) {
+        synchronized(timer) {
+            lastMessage = Instant.now();
+            if (task.map(TimerTask::cancel).orElse(true)) {
+                //task was cancelled or never scheduled
+                task = Optional.of(toTask(this::tryTimeout));
+                task.ifPresent(t -> timer.schedule(t, TIMEOUT.toMillis()));
+            } else {
+                //task is running or has ran already
+                //we are restarting so abort
+                return;
+            }
+        }
         if (errorCounter < 30000) {
             errorCounter++;
         }
 
-        //Avoid spamming when channel reopens, just log at 2 errors in the roll
+        // Avoid spamming when channel reopens, just log at 2 errors in the roll
         if (errorCounter > 1) {
-            Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE retry error. Error counter: " + errorCounter + ".");
+            Controller.INSTANCE.log
+                    .addLogEntry("ClonkspotConnector: SSE retry error. Error counter: " + errorCounter + ".");
         }
 
         if (errorCounter >= 10) {
-            if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
+            if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(),
+                    OnlineStatus.DO_NOT_DISTURB)) {
                 DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
                 Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: ERROR_UPSTREAM_OFFLINE.");
             }
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException ignored) {
+        }
+        ClonkspotConnector.INSTANCE.restart();
+    }
+    
+    private void tryTimeout() {
+        task.ifPresent(TimerTask::cancel);
+        synchronized (timer) {
+            Instant now = Instant.now();
+            Instant target = lastMessage.plus(TIMEOUT);
+            if (now.isBefore(target)) {
+                Controller.INSTANCE.log.addLogEntry(String.format(
+                        "ClonkspotConnector: Stream restart is %d milliseconds too early.",
+                                ChronoUnit.MILLIS.between(now, target)));
             }
         }
-        ClonkspotConnector.INSTANCE.startSse();
-        return false;
+        ClonkspotConnector.INSTANCE.start();
     }
-
-    @Override
-    public void onClosed(ServerSentEvent sse) {
-        //Avoid spamming when channel reopens. Message will be sent if onRetryError() wasn't called before
-        if (errorCounter == 0) System.out.println("ClonkspotConnector: SSE channel closed.");
-    }
-
-    @Override
-    public Request onPreRetry(ServerSentEvent sse, Request originalRequest) {
-        return null;
+    
+    private static TimerTask toTask(Runnable runnable) {
+        return new TimerTask() {
+            
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        };
     }
 }
