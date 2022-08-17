@@ -16,7 +16,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-package de.creative_land.discord.dispatch;
+package de.creative_land.discord.clonk_game_reference;
 
 import de.creative_land.clonkspot.model.GameReference;
 import net.dv8tion.jda.api.entities.Message;

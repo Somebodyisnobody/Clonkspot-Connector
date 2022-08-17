@@ -16,54 +16,35 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-package de.creative_land.discord.dispatch;
+package de.creative_land.discord.clonk_game_reference;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.regex.Pattern;
+public class MentionRoleCooldown {
+    private final String role;
 
-public class ManipulationRule {
-
-    private final String name;
-
-    private final Pattern pattern;
+    /**
+     * Cooldown in minutes.
+     */
+    private final int cooldown;
 
     private final String author;
 
-    private String replacement;
-
-    private List<String> roles;
-
-    public ManipulationRule(@JsonProperty("pattern") @NotNull Pattern pattern, @JsonProperty("replacement") String replacement, @JsonProperty("roles") String[] roles, @JsonProperty("user") String user, @NotNull @JsonProperty("name") String name) {
-        this.pattern = pattern;
-        this.replacement = replacement;
-        if (replacement != null && replacement.equals("null")) this.replacement = null;
-
-        if (roles != null) this.roles = Arrays.asList(roles);
-        this.author = user;
-        this.name = name;
+    public MentionRoleCooldown(@JsonProperty("role") String role, @JsonProperty("cooldown") int cooldown, @JsonProperty("author") String author) {
+        this.role = role;
+        this.cooldown = cooldown;
+        this.author = author;
     }
 
-    public Pattern getPattern() {
-        return pattern;
+    public String getRole() {
+        return role;
     }
 
-    public String getReplacement() {
-        return replacement;
-    }
-
-    public List<String> getRoles() {
-        return roles;
+    public int getCooldown() {
+        return cooldown;
     }
 
     public String getAuthor() {
         return author;
-    }
-
-    public String getName() {
-        return name;
     }
 }

@@ -16,35 +16,12 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-package de.creative_land.discord.dispatch;
+package de.creative_land.discord.clonk_game_reference;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-public class MentionRoleCooldown {
-    private final String role;
-
-    /**
-     * Cooldown in minutes.
-     */
-    private final int cooldown;
-
-    private final String author;
-
-    public MentionRoleCooldown(@JsonProperty("role") String role, @JsonProperty("cooldown") int cooldown, @JsonProperty("author") String author) {
-        this.role = role;
-        this.cooldown = cooldown;
-        this.author = author;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public int getCooldown() {
-        return cooldown;
-    }
-
-    public String getAuthor() {
-        return author;
-    }
+public enum BuildAction {
+    CREATE,
+    RUNNING_NO_RUNTIME_JOIN,
+    RUNNING_WITH_RUNTIME_JOIN,
+    CLOSE,
+    DELETE,
 }
