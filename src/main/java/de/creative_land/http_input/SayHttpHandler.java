@@ -28,42 +28,86 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Scanner;
+import java.util.TimeZone;
 
 public class SayHttpHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange httpExchange) throws IOException {
-        String requestParamValue = null;
         if ("POST".equals(httpExchange.getRequestMethod())) {
             try {
                 handlePostRequest(httpExchange);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                handleResponse(httpExchange, 200);
+            } catch (Exception e) {
+                handleResponse(httpExchange, 500);
             }
-        } else {
-            //return not implemented
         }
-        handleResponse(httpExchange, requestParamValue);
     }
 
-    private void handlePostRequest(HttpExchange httpExchange) throws IOException, InterruptedException {
+    private void handlePostRequest(HttpExchange httpExchange) throws IOException, InterruptedException, ParseException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         for (int length; (length = httpExchange.getRequestBody().read(buffer)) != -1; ) {
             result.write(buffer, 0, length);
         }
         // StandardCharsets.UTF_8.name() > JDK 7
-        var message = result.toString(StandardCharsets.UTF_8);
-        final String decodedMessage = URLDecoder.decode(message, StandardCharsets.UTF_8);
+        var body = result.toString(StandardCharsets.UTF_8);
+        // split into separate lines
+        body = body.replaceAll("&", "\n");
+        final String decodedBody = URLDecoder.decode(body, StandardCharsets.UTF_8);
+
+        HashMap<String, String> data = new HashMap<String, String>();
+        Scanner scanner = new Scanner(decodedBody);
+        while (scanner.hasNextLine()) {
+            String[] line = scanner.nextLine().split("=");
+            if (line.length == 2) data.put(line[0], line[1]);
+            if (line.length == 1) data.put(line[0], null);
+        }
+        scanner.close();
+
+
         final TextChannel channel = DiscordConnector.INSTANCE.getJda().getTextChannelById("1009559715296055338");
+
         if (channel != null) {
-            channel.sendMessage(decodedMessage).complete();
+            switch (data.get("shortname")) {
+                case "league.clonkspot.org" -> {
+                    //Parse date from String
+                    SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+                    sdf.setTimeZone(TimeZone.getDefault());
+                    Date date = sdf.parse(data.get("lastcheck").replaceAll("(^\\d\\d\\.\\d\\d.\\d{4}\\s\\d\\d:\\d\\d:\\d\\d).*", "$1"));
+
+                    //Format output strings
+                    final String lastValue = data.get("lastvalue").replaceAll("([0-9]+\\sms).*", "$1");
+                    sdf = new SimpleDateFormat("HH:mm");
+                    final String lastCheckTime = sdf.format(date);
+
+                    if ("Warnung".equals(data.get("status"))) {
+                        String message = String.format(
+                                "*Warning:* High response time of the master server. Last value: %s at %s",
+                                lastValue, lastCheckTime);
+                        channel.sendMessage(message).queue();
+                    } else if ("Fehler".equals(data.get("status"))) {
+                        String message = String.format(
+                                "*Alert:* Clonkspot services are degraded. The master server does not respond within a given threshold. Last value: %s at %s",
+                                lastValue, lastCheckTime);
+                        channel.sendMessage(message).queue();
+                    }
+                }
+                case "clonkspot.org" -> {
+
+                }
+            }
         }
 
     }
 
-    private void handleResponse(HttpExchange httpExchange, String requestParamValue) throws IOException {
+    private void handleResponse(HttpExchange httpExchange, int status) throws IOException {
         OutputStream outputStream = httpExchange.getResponseBody();
-        httpExchange.sendResponseHeaders(200, 0);
+        httpExchange.sendResponseHeaders(status, 0);
         outputStream.flush();
         outputStream.close();
     }
