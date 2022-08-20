@@ -23,6 +23,8 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
+
 public class HttpController {
 
     HttpServer server;
@@ -30,10 +32,8 @@ public class HttpController {
     public HttpController() throws IOException {
         this.server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8080), 0);
 
-        server.createContext("/say", new SayHttpHandler());
-        //server.setExecutor(threadPoolExecutor);
+        server.createContext("/prtg-webhook", new PrtgHttpHandler());
+        server.setExecutor(newSingleThreadExecutor());
         server.start();
-
-
     }
 }
