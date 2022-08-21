@@ -51,7 +51,7 @@ public class PrtgHttpHandler implements HttpHandler {
         }
     }
 
-    private void handlePostRequest(HttpExchange httpExchange) throws IOException, InterruptedException, ParseException {
+    private void handlePostRequest(HttpExchange httpExchange) throws IOException, ParseException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         for (int length; (length = httpExchange.getRequestBody().read(buffer)) != -1; ) {
@@ -64,7 +64,7 @@ public class PrtgHttpHandler implements HttpHandler {
         // Print incoming data to console for debugging purposes
         if (parseBoolean(System.getenv("DEBUG"))) System.out.println(body);
 
-        HashMap<String, String> data = new HashMap<String, String>();
+        HashMap<String, String> data = new HashMap<>();
         Scanner scanner = new Scanner(decodedBody);
         // For each line split key from value at "=" and write it into the "data"-map
         while (scanner.hasNextLine()) {
@@ -148,13 +148,8 @@ public class PrtgHttpHandler implements HttpHandler {
                         this.stoppedByMonitoring = false;
                     }
                 }
-                case "false-positive-check" -> handleConnectivityNotification(data);
             }
         }
-    }
-
-    private void handleConnectivityNotification(HashMap<String, String> data) {
-        // TODO prevent discord notifications from being sent to queue if the errors are caused by internal connectivity problems.
     }
 
     private void handleResponse(HttpExchange httpExchange, int status) throws IOException {
