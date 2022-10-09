@@ -24,7 +24,7 @@ public enum Activity {
     ERROR_NO_GUILD("falsche Configs: Es ist kein Server konfiguriert, der benutzt werden soll! Übergabeparameter beachten."),
     ERROR_NO_CHANNEL("falsche Configs: Konfigurierter Kanal existiert nicht!"),
     ERROR_NO_ADMIN_ROLE("falsche Configs: Keine Administrationsrolle! Übergabeparameter beachten."),
-    ERROR_UPSTREAM_OFFLINE("wann wieder eine Verbindung zum Clonkspot möglich ist."),
+    ERROR_UPSTREAM_OFFLINE("wann wieder eine Verbindung zum Clonkspot-Server möglich ist."),
     ;
 
     private final String value;

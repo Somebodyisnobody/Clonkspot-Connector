@@ -16,7 +16,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-package de.creative_land.discord.dispatch;
+package de.creative_land.discord.clonk_game_reference;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -165,7 +165,7 @@ public class Dispatcher {
         if (messageContent != null) {
             try {
                 addDispatchedMessage(new DispatchedMessage(
-                        DiscordConnector.INSTANCE.getTargetDispatchChannel().sendMessage(messageContent).complete(),
+                        DiscordConnector.INSTANCE.getGameReferenceDispatchChannel().sendMessage(messageContent).complete(),
                         gameReference
                 ));
                 System.out.println("DiscordConnector: Dispatched: " + gameReference.id + ".");

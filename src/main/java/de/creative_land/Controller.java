@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.creative_land.clonkspot.ClonkspotConnector;
 import de.creative_land.discord.DiscordArguments;
 import de.creative_land.discord.DiscordConnector;
+import de.creative_land.http_input.HttpController;
 import net.dv8tion.jda.api.OnlineStatus;
 
 import java.io.BufferedReader;
@@ -70,7 +71,7 @@ public class Controller {
         if (sseEndpoint != null) Controller.INSTANCE.configuration.setSseEndpoint(sseEndpoint);
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         long guildId = parseLong(System.getenv(Argument.GUILD_ID.name()));
         String adminRoleName = System.getenv(Argument.ADMIN_ROLE_NAME.name());
         String apiKey = System.getenv(Argument.KEY.name());
@@ -120,6 +121,7 @@ public class Controller {
         new Controller(joinUrl, sseEndpoint);
         new DiscordConnector(arguments);
         new ClonkspotConnector();
+        new HttpController();
         readConsole();
     }
 
@@ -156,7 +158,7 @@ public class Controller {
         stringBuilder.append("\t").append("--joinurl <String> ------------ Url which is dispatched for others to join games").append(newline);
         stringBuilder.append("\t").append("--sseendpoint <String> -------- SSE endpoint where the application searches for new games").append(newline);
         stringBuilder.append("\t").append("--help ------------------------ Show this help").append(newline);
-        System.out.print(stringBuilder.toString());
+        System.out.print(stringBuilder);
     }
 
     /**
@@ -182,7 +184,7 @@ public class Controller {
                         stringBuilder.append("Available commands:").append(newline);
                         stringBuilder.append("\t").append("exit ------------ Stop the application").append(newline);
                         stringBuilder.append("\t").append("help ------------ Show this help").append(newline);
-                        System.out.println(stringBuilder.toString());
+                        System.out.println(stringBuilder);
                     } else if (line.equals("")) {
                         System.out.println("I am still alive!");
                     } else {

@@ -16,35 +16,24 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-package de.creative_land.discord.dispatch;
+package de.creative_land.http_input;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sun.net.httpserver.HttpServer;
 
-public class MentionRoleCooldown {
-    private final String role;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
-    /**
-     * Cooldown in minutes.
-     */
-    private final int cooldown;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
-    private final String author;
+public class HttpController {
 
-    public MentionRoleCooldown(@JsonProperty("role") String role, @JsonProperty("cooldown") int cooldown, @JsonProperty("author") String author) {
-        this.role = role;
-        this.cooldown = cooldown;
-        this.author = author;
-    }
+    HttpServer server;
 
-    public String getRole() {
-        return role;
-    }
+    public HttpController() throws IOException {
+        this.server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8080), 0);
 
-    public int getCooldown() {
-        return cooldown;
-    }
-
-    public String getAuthor() {
-        return author;
+        server.createContext("/prtg-webhook", new PrtgHttpHandler());
+        server.setExecutor(newSingleThreadExecutor());
+        server.start();
     }
 }

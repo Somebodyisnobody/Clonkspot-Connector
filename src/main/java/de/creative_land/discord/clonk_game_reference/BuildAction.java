@@ -16,7 +16,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-package de.creative_land.discord.dispatch;
+package de.creative_land.discord.clonk_game_reference;
 
 public enum BuildAction {
     CREATE,
@@ -24,5 +24,4 @@ public enum BuildAction {
     RUNNING_WITH_RUNTIME_JOIN,
     CLOSE,
     DELETE,
-    ;
 }

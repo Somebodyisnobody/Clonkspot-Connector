@@ -21,8 +21,8 @@ package de.creative_land;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.creative_land.discord.DiscordConnector;
-import de.creative_land.discord.dispatch.ManipulationRule;
-import de.creative_land.discord.dispatch.MentionRoleCooldown;
+import de.creative_land.discord.clonk_game_reference.ManipulationRule;
+import de.creative_land.discord.clonk_game_reference.MentionRoleCooldown;
 import net.dv8tion.jda.api.JDA;
 
 import java.io.File;

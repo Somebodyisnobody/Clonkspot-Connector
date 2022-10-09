@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import de.creative_land.Configuration;
 import de.creative_land.Controller;
 import de.creative_land.IgnoredHostname;
-import de.creative_land.discord.dispatch.ManipulationRule;
-import de.creative_land.discord.dispatch.MentionRoleCooldown;
+import de.creative_land.discord.clonk_game_reference.ManipulationRule;
+import de.creative_land.discord.clonk_game_reference.MentionRoleCooldown;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.PrivateChannel;
@@ -215,7 +215,7 @@ public class Commands {
         } else if (textChannels.size() > 1) {
             c.sendMessage(":x: Too many channels found (retry case sensitive).").queue();
         } else {
-            if (connector.readNewTargetDispatchChannel(textChannels.get(0).getIdLong())) {
+            if (connector.readNewGameReferenceDispatchChannel(textChannels.get(0).getIdLong())) {
                 c.sendMessage(":white_check_mark: New target channel set.").queue();
                 controller.log.addLogEntry(
                         String.format("DiscordConnector: New target channel set by \"%s\" (Channel: \"#%s\").",
@@ -224,7 +224,7 @@ public class Commands {
                         Activity.competing(de.creative_land.discord.Activity.ERROR_NO_CHANNEL.toString()))) {
                     connector.status.setRunning();
                     c.sendMessage(
-                            ":white_check_mark: Started the service. New games will be announced when they appear on clonkspot.")
+                                    ":white_check_mark: Started the service. New games will be announced when they appear on clonkspot.")
                             .queue();
                     controller.log.addLogEntry(
                             String.format("DiscordConnector: Service started by \"%s\".", c.getUser().getName()));
@@ -431,7 +431,7 @@ public class Commands {
         final var controller = Controller.INSTANCE;
         final var connector = DiscordConnector.INSTANCE;
         try {
-            final var gameReference = connector.dispatcher.getDispatchedMessages().stream()
+            final var gameReference = connector.gameDispatcher.getDispatchedMessages().stream()
                     .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == Integer.parseInt(args[0]))
                     .findFirst();
             if (gameReference.isPresent()) {

@@ -19,7 +19,7 @@
 package de.creative_land.discord;
 
 import de.creative_land.Controller;
-import de.creative_land.discord.dispatch.Dispatcher;
+import de.creative_land.discord.clonk_game_reference.Dispatcher;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
@@ -37,7 +37,7 @@ public class DiscordConnector {
 
     public static DiscordConnector INSTANCE;
 
-    public final Dispatcher dispatcher;
+    public final Dispatcher gameDispatcher;
 
     public final Status status;
 
@@ -49,7 +49,7 @@ public class DiscordConnector {
 
     private Role adminRole;
 
-    private TextChannel targetDispatchChannel;
+    private TextChannel gameReferenceDispatchChannel;
 
     public DiscordConnector(DiscordArguments discordArguments) throws InterruptedException {
         INSTANCE = this;
@@ -61,7 +61,7 @@ public class DiscordConnector {
 
         this.status = new Status();
         scanEnvironment(discordArguments);
-        this.dispatcher = new Dispatcher();
+        this.gameDispatcher = new Dispatcher();
         this.commandManager = new CommandManager();
     }
 
@@ -124,7 +124,7 @@ public class DiscordConnector {
         } else if (!readNewAdminRole(discordArguments == null ? null : discordArguments.getAdminRoleName())) {
             status.setErrNoAdminRole();
             Controller.INSTANCE.log.addLogEntry("DiscordConnector: New status: ERROR_NO_ADMIN_ROLE.");
-        } else if (!readNewTargetDispatchChannel(0)) {
+        } else if (!readNewGameReferenceDispatchChannel(0)) {
             status.setErrNoChannel();
             Controller.INSTANCE.log.addLogEntry("DiscordConnector: New status: ERROR_NO_CHANNEL.");
         } else {
@@ -139,18 +139,18 @@ public class DiscordConnector {
      * @param newChannel the id of the new channel.
      * @return true if setting the new channel was successful, false if not.
      */
-    public boolean readNewTargetDispatchChannel(long newChannel) {
+    public boolean readNewGameReferenceDispatchChannel(long newChannel) {
         if (newChannel > 0) {
-            final var newTargetDispatchChannel = jda.getTextChannelById(newChannel);
-            if (newTargetDispatchChannel != null) {
-                targetDispatchChannel = newTargetDispatchChannel;
+            final var newDispatchChannel = jda.getTextChannelById(newChannel);
+            if (newDispatchChannel != null) {
+                gameReferenceDispatchChannel = newDispatchChannel;
                 Controller.INSTANCE.configuration.setTargetDispatchChannel(newChannel);
                 return true;
             }
         } else {
-            final var newTargetDispatchChannel = jda.getTextChannelById(Controller.INSTANCE.configuration.getTargetDispatchChannel());
-            if (newTargetDispatchChannel != null) {
-                targetDispatchChannel = newTargetDispatchChannel;
+            final var newDispatchChannel = jda.getTextChannelById(Controller.INSTANCE.configuration.getTargetDispatchChannel());
+            if (newDispatchChannel != null) {
+                gameReferenceDispatchChannel = newDispatchChannel;
                 return true;
             }
         }
@@ -210,7 +210,7 @@ public class DiscordConnector {
         return adminRole;
     }
 
-    public TextChannel getTargetDispatchChannel() {
-        return targetDispatchChannel;
+    public TextChannel getGameReferenceDispatchChannel() {
+        return gameReferenceDispatchChannel;
     }
 }

@@ -58,7 +58,7 @@ public class SseListener implements ServerSentEvent.Listener {
     @Override
     public void onMessage(ServerSentEvent sse, String id, String event, String message) {
         try {
-            executor.execute(() -> DiscordConnector.INSTANCE.dispatcher.process(message, event));
+            executor.execute(() -> DiscordConnector.INSTANCE.gameDispatcher.process(message, event));
         } catch (Exception e) {
             Controller.INSTANCE.log.addLogEntry(e);
         }
