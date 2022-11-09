@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.creative_land.discord.DiscordConnector;
 import de.creative_land.discord.clonk_game_reference.ManipulationRule;
 import de.creative_land.discord.clonk_game_reference.MentionRoleCooldown;
+import de.creative_land.twitch.TwitchConfiguration;
 import net.dv8tion.jda.api.JDA;
 
 import java.io.File;
@@ -58,20 +59,24 @@ public class Configuration {
 
     private String sseEndpoint;
 
-    public Configuration(@JsonProperty("manipulationRules") ArrayList<ManipulationRule> manipulationRules, @JsonProperty("ignoredHostnames") ArrayList<IgnoredHostname> ignoredHostnames, @JsonProperty("mentionRoleCooldowns") ArrayList<MentionRoleCooldown> mentionRoleCooldowns) {
+    private final TwitchConfiguration twitchConfiguration;
+
+    public Configuration(@JsonProperty("manipulationRules") ArrayList<ManipulationRule> manipulationRules, @JsonProperty("ignoredHostnames") ArrayList<IgnoredHostname> ignoredHostnames, @JsonProperty("mentionRoleCooldowns") ArrayList<MentionRoleCooldown> mentionRoleCooldowns, @JsonProperty("twitchConfiguration") TwitchConfiguration twitchConfiguration) {
         this.manipulationRules = manipulationRules;
         this.ignoredHostnames = ignoredHostnames;
         this.mentionRoleCooldowns = mentionRoleCooldowns;
+        this.twitchConfiguration = twitchConfiguration == null ? new TwitchConfiguration("", "", "", 0, 0) : twitchConfiguration;
     }
 
-    private void saveConfig() {
-        //Dont save until system booted
+    public void saveConfig() {
+        //Don't save until system booted
         if (DiscordConnector.INSTANCE != null && DiscordConnector.INSTANCE.getJda() != null && DiscordConnector.INSTANCE.getJda().getStatus() == JDA.Status.CONNECTED) {
 
             //Object to JSON in file
             ObjectMapper mapper = new ObjectMapper();
             try {
-                mapper.writeValue(new File(System.getProperty("user.dir") + File.separator + "config.json"), this);
+                mapper.writerWithDefaultPrettyPrinter().writeValue(new File(System.getProperty("user.dir") + File.separator + "config.json"), this);
+                Controller.INSTANCE.log.addLogEntry("Controller: Configuration saved.");
             } catch (IOException e) {
                 Controller.INSTANCE.log.addLogEntry("Controller: Error while writing file to disk: ", e);
             }
@@ -241,5 +246,9 @@ public class Configuration {
     public void setSseEndpoint(String sseEndpoint) {
         this.sseEndpoint = sseEndpoint;
         saveConfig();
+    }
+
+    public TwitchConfiguration getTwitchConfiguration() {
+        return twitchConfiguration;
     }
 }

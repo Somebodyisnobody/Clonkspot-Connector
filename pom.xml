@@ -104,5 +104,11 @@
             <version>5.7.1</version>
             <scope>test</scope>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.github.twitch4j/twitch4j -->
+        <dependency>
+            <groupId>com.github.twitch4j</groupId>
+            <artifactId>twitch4j</artifactId>
+            <version>1.12.0</version>
+        </dependency>
     </dependencies>
 </project>

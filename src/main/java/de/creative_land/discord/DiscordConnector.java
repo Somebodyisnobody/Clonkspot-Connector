@@ -58,6 +58,8 @@ public class DiscordConnector {
 
         jda.awaitStatus(JDA.Status.CONNECTED);
         Controller.INSTANCE.log.addLogEntry("DiscordConnector: JDA connected.");
+        Controller.INSTANCE.configuration.saveConfig();
+
 
         this.status = new Status();
         scanEnvironment(discordArguments);

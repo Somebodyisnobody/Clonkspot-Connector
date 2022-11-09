@@ -23,6 +23,7 @@ import de.creative_land.clonkspot.ClonkspotConnector;
 import de.creative_land.discord.DiscordArguments;
 import de.creative_land.discord.DiscordConnector;
 import de.creative_land.http_input.HttpController;
+import de.creative_land.twitch.TwitchController;
 import net.dv8tion.jda.api.OnlineStatus;
 
 import java.io.BufferedReader;
@@ -51,7 +52,7 @@ public class Controller {
                 configuration = mapper.readValue(new File(System.getProperty("user.dir") + File.separator + "config.json"), Configuration.class);
             } else {
                 Controller.INSTANCE.log.addLogEntry("Controller: Using new configuration file (Is saved, when the discord login was successful).");
-                configuration = new Configuration(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+                configuration = new Configuration(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), null);
             }
         } catch (IOException e) {
             Controller.INSTANCE.log.addLogEntry(e);
@@ -122,6 +123,7 @@ public class Controller {
         new DiscordConnector(arguments);
         new ClonkspotConnector();
         new HttpController();
+        new TwitchController();
         readConsole();
     }
 
