@@ -65,7 +65,7 @@ public class Configuration {
         this.manipulationRules = manipulationRules;
         this.ignoredHostnames = ignoredHostnames;
         this.mentionRoleCooldowns = mentionRoleCooldowns;
-        this.twitchConfiguration = twitchConfiguration == null ? new TwitchConfiguration("", "", "", 0, 0) : twitchConfiguration;
+        this.twitchConfiguration = twitchConfiguration == null ? new TwitchConfiguration(null, null, null, 0, 0, null, null) : twitchConfiguration;
     }
 
     public void saveConfig() {

@@ -46,12 +46,32 @@ public class TwitchConfiguration {
      */
     private final int searchPeriod;
 
-    public TwitchConfiguration(@JsonProperty("clientId") String clientId, @JsonProperty("clientSecret") String clientSecret, @JsonProperty("game") String game, @JsonProperty("initialStartupDelay") int initialStartupDelay, @JsonProperty("searchPeriod") int searchPeriod) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.game = game;
+    /**
+     * The identifier for an icon that will be placed at the beginning of a Twitch related message. E.g. ":smile:"
+     */
+    private final String iconString;
+
+    /**
+     * If set a role will be poked when a new stream starts
+     */
+    private final String notificationRole;
+
+    public TwitchConfiguration(@JsonProperty("clientId") String clientId, @JsonProperty("clientSecret") String clientSecret, @JsonProperty("game") String game, @JsonProperty("initialStartupDelay") int initialStartupDelay, @JsonProperty("searchPeriod") int searchPeriod, @JsonProperty("iconString") String iconString, @JsonProperty("notificationRole") String notificationRole) {
+        this.clientId = clientId == null ? "" : clientId;
+        this.clientSecret = clientSecret == null ? "" : clientSecret;
+        this.game = game == null ? "" : game;
         this.initialStartupDelay = initialStartupDelay == 0 ? 5 : initialStartupDelay;
         this.searchPeriod = searchPeriod == 0 ? 30 : searchPeriod;
+        this.iconString = iconString == null ? "" : iconString;
+        this.notificationRole = notificationRole == null ? "" : notificationRole;
+    }
+
+    public String getIconString() {
+        return iconString;
+    }
+
+    public String getNotificationRole() {
+        return notificationRole;
     }
 
     public String getClientId() {
