@@ -36,6 +36,12 @@ class DispatchedMessage {
      */
     private Message message;
 
+    /**
+     * Twitch API seems to have a bug where it hides active streams, so they are reannounced after a while. This goes on and on and ends in a loop. Therefore, we need to set a timeout to n times which the stream must not be shown in the list to be deannounced.
+     * This variable is for tracing how often the stream was not in the list of active streams.
+     */
+    public int timeoutCounter;
+
     public DispatchedMessage(@NotNull Message message, @NotNull Stream stream) {
         this.message = message;
         this.stream = stream;

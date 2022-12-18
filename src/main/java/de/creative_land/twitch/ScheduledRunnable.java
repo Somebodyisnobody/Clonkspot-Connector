@@ -20,6 +20,7 @@ package de.creative_land.twitch;
 
 import com.github.twitch4j.helix.TwitchHelix;
 import com.github.twitch4j.helix.domain.Stream;
+import com.github.twitch4j.helix.domain.StreamList;
 import de.creative_land.Controller;
 import de.creative_land.discord.DiscordConnector;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -52,25 +53,54 @@ public class ScheduledRunnable implements Runnable {
     @Override
     public void run() {
         if (channel != null) {
+            if (parseBoolean(System.getenv("DEBUG")))
+                System.out.println("###################### New run ######################");
             var activeStreams = client.getStreams(null, null, null, null, List.of(gameId), null, null, null).execute();
-            // Test if stream was announced already (is a "registered" stream) and announce if not.
-            for (var stream : activeStreams.getStreams()) {
-                if (registeredStreams.stream().map(s -> s.getStream().getId()).noneMatch(s -> s.equals(stream.getId()))) {
-                    String message = buildStreamStartedMessage(stream);
-                    channel.sendMessage(message).queue(sentMessage -> {
-                        registeredStreams.add(new DispatchedMessage(sentMessage, stream));
-                        if (parseBoolean(System.getenv("DEBUG")))
-                            System.out.println("Created stream \"" + stream.getTitle() + "\"");
-                    });
-                } else if (parseBoolean(System.getenv("DEBUG")))
-                    System.out.println("Stream \"" + stream.getTitle() + "\" already in list");
+            checkNewStreams(activeStreams);
+            checkEndedStreams(activeStreams);
+        }
+    }
 
+    /**
+     * Test if stream was announced already (is a "registered" stream) and announce if not.
+     *
+     * @param activeStreams The list of currently active streams.
+     */
+    private void checkNewStreams(StreamList activeStreams) {
+        for (var stream : activeStreams.getStreams()) {
+            var optionalStream = registeredStreams.stream().filter(dispatchedMessage -> dispatchedMessage.getStream().getId().equals(stream.getId())).findFirst();
+            if (optionalStream.isEmpty()) {
+                String message = buildStreamStartedMessage(stream);
+                channel.sendMessage(message).queue(sentMessage -> {
+                    registeredStreams.add(new DispatchedMessage(sentMessage, stream));
+                    if (parseBoolean(System.getenv("DEBUG")))
+                        System.out.println("Created stream \"" + stream.getTitle() + "\"");
+                });
+            } else {
+                var dispatchedMessage = optionalStream.get();
+                int oldTimeout = dispatchedMessage.timeoutCounter;
+                dispatchedMessage.timeoutCounter = 0;
+                if (parseBoolean(System.getenv("DEBUG")))
+                    System.out.println("Stream \"" + stream.getTitle() + "\" already in list. Old timeout counter: " + oldTimeout + ", new: " + dispatchedMessage.timeoutCounter);
             }
+        }
+    }
 
-            // Filter ended streams (streams which are not in activeStreams but in registeredStreams) and announce if a stream has ended.
-            var activeStreamIds = activeStreams.getStreams().stream().map(Stream::getId).collect(Collectors.toList());
-            registeredStreams.stream().filter(registeredStream -> !activeStreamIds.contains(registeredStream.getStream().getId())).forEach(
-                    dispatchedMessage -> {
+    /**
+     * Filter ended streams (streams which are not in activeStreams but in registeredStreams) and announce if a stream has ended.
+     * Twitch API seems to have a bug where it hides active streams, so they are reannounced after a while. This goes on and on and ends in a loop. Therefore, we need to set a timeout to n times which the stream must not be shown in the list to be deannounced.
+     *
+     * @param activeStreams The list of currently active streams.
+     */
+    private void checkEndedStreams(StreamList activeStreams) {
+        var activeStreamIds = activeStreams.getStreams().stream().map(Stream::getId).collect(Collectors.toList());
+        registeredStreams.stream().filter(registeredStream -> !activeStreamIds.contains(registeredStream.getStream().getId())).forEach(
+                dispatchedMessage -> {
+                    dispatchedMessage.timeoutCounter++;
+                    if (parseBoolean(System.getenv("DEBUG")))
+                        System.out.println("Timeout stream \"" + dispatchedMessage.getStream().getTitle() + "\": " + dispatchedMessage.timeoutCounter);
+                    // If the stream didn't appear n times in the list then it has to be deannounced
+                    if (dispatchedMessage.timeoutCounter > 4) {
                         String message = buildStreamEndedMessage(dispatchedMessage.getStream());
                         dispatchedMessage.getMessage().editMessage(message).queue(
                                 // Delete stream from registered streams when it ended and this was announced successfully
@@ -81,8 +111,9 @@ public class ScheduledRunnable implements Runnable {
                                 }
                         );
                     }
-            );
-        }
+
+                }
+        );
     }
 
     private String buildStreamStartedMessage(Stream stream) {
