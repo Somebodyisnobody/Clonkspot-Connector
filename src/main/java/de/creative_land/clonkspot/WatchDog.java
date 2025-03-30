@@ -18,44 +18,39 @@
 
 package de.creative_land.clonkspot;
 
-import com.here.oksse.OkSse;
-import com.here.oksse.ServerSentEvent;
 import de.creative_land.Controller;
-import okhttp3.Request;
+import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
-public class ClonkspotConnector {
-    public static ClonkspotConnector INSTANCE;
+@Slf4j
+public class WatchDog implements Runnable {
 
-    private final Request request;
+    private final Runnable alarmAction;
+    private final BlockingQueue<Boolean> watchdogFood = new LinkedBlockingQueue<>();
 
-    private final OkSse okSse;
-
-    public ServerSentEvent sse;
-
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
-
-    public ClonkspotConnector() {
-        INSTANCE = this;
-
-        request = new Request.Builder().url(Controller.INSTANCE.configuration.getSseEndpoint()).build();
-
-        okSse = new OkSse();
-
-        restartSSE();
-        executorService.execute(watchDog);
-    }    private final WatchDog watchDog = new WatchDog(this::restartSSE);
-
-    /**
-     * Creates a new SSE-Client and overwrites an old one.
-     */
-    protected void restartSSE() {
-        if (sse != null) sse.close();
-        sse = okSse.newServerSentEvent(request, new SseListener(watchDog));
+    public WatchDog(Runnable alarmAction) {
+        this.alarmAction = alarmAction;
     }
 
+    @Override
+    public void run() {
+        Thread.currentThread().setName("SSE Connection Watchdog");
+        try {
+            while (true) {
+                if (watchdogFood.poll(61, TimeUnit.SECONDS) == null) {
+                    Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE timeout. Restarting SSE listener");
+                    alarmAction.run();
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 
-
+    public void feed() {
+        watchdogFood.add(true);
+    }
 }

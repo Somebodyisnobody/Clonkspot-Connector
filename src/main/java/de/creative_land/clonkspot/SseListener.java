@@ -21,21 +21,28 @@ package de.creative_land.clonkspot;
 import com.here.oksse.ServerSentEvent;
 import de.creative_land.Controller;
 import de.creative_land.discord.DiscordConnector;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.OnlineStatus;
 import okhttp3.Request;
 import okhttp3.Response;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
+@RequiredArgsConstructor
 public class SseListener implements ServerSentEvent.Listener {
 
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES, new ArrayBlockingQueue<>(50));
 
     int errorCounter = 0;
     boolean firstStart = true;
+    private final WatchDog watchDog;
+    boolean errorStatusSet = false;
 
     @Override
     public void onOpen(ServerSentEvent sse, Response response) {
@@ -43,12 +50,14 @@ public class SseListener implements ServerSentEvent.Listener {
         if (firstStart) {
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE channel opened.");
             firstStart = false;
+            watchDog.feed();
         }
 
-        if (errorCounter >= 10 && Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
+        if (errorStatusSet && Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             DiscordConnector.INSTANCE.status.setRunning();
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: Clonkspot is back!");
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: RUNNING.");
+            errorStatusSet = false;
         }
 
         //reset errorCounter on successful connect
@@ -57,6 +66,7 @@ public class SseListener implements ServerSentEvent.Listener {
 
     @Override
     public void onMessage(ServerSentEvent sse, String id, String event, String message) {
+        watchDog.feed();
         try {
             executor.execute(() -> DiscordConnector.INSTANCE.gameDispatcher.process(message, event));
         } catch (Exception e) {
@@ -66,17 +76,31 @@ public class SseListener implements ServerSentEvent.Listener {
 
     @Override
     public void onComment(ServerSentEvent sse, String comment) {
-        System.out.println("ClonkspotConnector: SSE comment received.");
+        watchDog.feed();
+        log.debug("ClonkspotConnector: SSE comment received: '{}'", comment);
     }
 
     @Override
     public boolean onRetryTime(ServerSentEvent sse, long milliseconds) {
-        System.out.println("ClonkspotConnector: SSE retry time.");
-        return false;
+        return true;
     }
 
     @Override
     public boolean onRetryError(ServerSentEvent sse, Throwable throwable, Response response) {
+        if (throwable instanceof IOException ioException) {
+            Controller.INSTANCE.log.addLogEntry(
+                    "ClonkspotConnector: SSE retry error. Will not retry again: '%s'".formatted(ioException.getMessage())
+            );
+            if (response != null) {
+                Controller.INSTANCE.log.addLogEntry(
+                        "ClonkspotConnector: SSE response from upstream returned HTTP status code: '%s'".formatted(
+                                response.code()
+                        )
+                );
+            }
+            return false;
+        }
+
         if (errorCounter < 30000) {
             errorCounter++;
         }
@@ -90,20 +114,17 @@ public class SseListener implements ServerSentEvent.Listener {
             if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
                 DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
                 Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: ERROR_UPSTREAM_OFFLINE.");
+                errorStatusSet = true;
             }
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException ignored) {
-            }
+            return false;
         }
-        ClonkspotConnector.INSTANCE.startSse();
-        return false;
+        return true;
     }
 
     @Override
     public void onClosed(ServerSentEvent sse) {
         //Avoid spamming when channel reopens. Message will be sent if onRetryError() wasn't called before
-        if (errorCounter == 0) System.out.println("ClonkspotConnector: SSE channel closed.");
+        if (errorCounter < 2) log.info("ClonkspotConnector: SSE channel closed.");
     }
 
     @Override
