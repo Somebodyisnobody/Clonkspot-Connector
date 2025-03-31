@@ -30,6 +30,7 @@ import org.apache.maven.model.v4.MavenStaxReader;
 import javax.xml.stream.XMLStreamException;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class Controller {
     public static final String VERSION = "1.1";
@@ -201,7 +202,21 @@ public class Controller {
 
     public static String getArtifactVersion() throws IOException, XMLStreamException {
         MavenStaxReader reader = new MavenStaxReader();
-        Model model = reader.read(new FileReader("pom.xml"));
+        Model model;
+        if ((new File("pom.xml")).exists()) {
+            model = reader.read(new FileReader("pom.xml"));
+        } else {
+            final Class<Controller> thisClass = Controller.class;
+            model = reader.read(
+                    new InputStreamReader(
+                            Objects.requireNonNull(
+                                    thisClass.getResourceAsStream(
+                                            "/META-INF/maven/" + thisClass.getPackageName() + "/clonkspot-connector/pom.xml"
+                                    )
+                            )
+                    )
+            );
+        }
         return model.getVersion();
     }
 }

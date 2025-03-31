@@ -64,6 +64,17 @@
                 </configuration>
             </plugin>
         </plugins>
+
+        <resources>
+            <resource>
+                <directory>${basedir}</directory>
+                <includes>
+                    <!-- Needed for logging applicaiton version at startup -->
+                    <include>pom.xml</include>
+                </includes>
+                <targetPath>META-INF/maven/${groupId}/${artifactId}/</targetPath>
+            </resource>
+        </resources>
     </build>
 
     <repositories>
