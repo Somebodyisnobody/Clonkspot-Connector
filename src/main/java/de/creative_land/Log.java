@@ -18,11 +18,16 @@
 
 package de.creative_land;
 
+import javax.xml.stream.XMLStreamException;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Vector;
+
+import static de.creative_land.Controller.getArtifactVersion;
 
 public class Log {
 
@@ -30,14 +35,23 @@ public class Log {
 
     public Log() {
         log = new Vector<>();
+
+        final StringBuilder sb = new StringBuilder("Clonkspot Discord Connector ☜(ﾟヮﾟ☜)\t|\tVersion ");
+        try {
+            sb.append(getArtifactVersion());
+        } catch (XMLStreamException | IOException e) {
+            e.printStackTrace();
+            sb.append("Error reading artifact version!");
+        }
         addLogEntry("Started the application");
+        addLogEntry(sb);
     }
 
     public String printLog() {
         return String.join("\n", log);
     }
 
-    public void addLogEntry(String message) {
+    public void addLogEntry(Serializable message) {
         SimpleDateFormat formatter = new SimpleDateFormat("dd.MM 'at' HH:mm z");
         System.out.println(message);
         log.add(formatter.format(new Date(System.currentTimeMillis())) + ":  " + message);
