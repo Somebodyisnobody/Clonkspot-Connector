@@ -22,7 +22,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import de.creative_land.discord.DiscordConnector;
 import net.dv8tion.jda.api.OnlineStatus;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

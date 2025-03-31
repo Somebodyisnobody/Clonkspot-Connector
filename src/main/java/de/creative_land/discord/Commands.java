@@ -28,7 +28,8 @@ import de.creative_land.discord.clonk_game_reference.ManipulationRule;
 import de.creative_land.discord.clonk_game_reference.MentionRoleCooldown;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.PrivateChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
+import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -104,7 +105,7 @@ public class Commands {
             if (log.length() + 8 < 2000) {
                 c.sendMessage(String.format("```\n%s\n```", log)).queue();
             } else {
-                c.sendFile(log.getBytes(StandardCharsets.UTF_8), "log.txt").queue();
+                c.sendFiles(FileUpload.fromData(log.getBytes(StandardCharsets.UTF_8), "log.txt")).queue();
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
@@ -195,7 +196,7 @@ public class Commands {
             if (message.length() + 8 < 2000) {
                 c.sendMessage("```\n" + message + "\n```").queue();
             } else {
-                c.sendFile(message.getBytes(StandardCharsets.UTF_8), "config.txt").queue();
+                c.sendFiles(FileUpload.fromData(message.getBytes(StandardCharsets.UTF_8), "config.txt")).queue();
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();
@@ -441,7 +442,7 @@ public class Commands {
                 if (formattedGameReference.length() < 1900) {
                     c.sendMessage(String.format("```\n%s\n```", formattedGameReference)).queue();
                 } else {
-                    c.sendFile(formattedGameReference.getBytes(StandardCharsets.UTF_8), "game reference.txt").queue();
+                    c.sendFiles(FileUpload.fromData(formattedGameReference.getBytes(StandardCharsets.UTF_8), "game reference.txt")).queue();
                 }
             } else {
                 c.sendMessage(

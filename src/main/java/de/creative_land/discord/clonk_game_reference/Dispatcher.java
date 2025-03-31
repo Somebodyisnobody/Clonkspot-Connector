@@ -303,7 +303,7 @@ public class Dispatcher {
      * @param buildAction       action which message string has to be built.
      */
     private void editMessage(DispatchedMessage dispatchedMessage, GameReference gameReference, BuildAction buildAction) {
-        final String messageContent = messageBuilder.build(gameReference, buildAction, dispatchedMessage.getMessage().getMentionedRoles());
+        final String messageContent = messageBuilder.build(gameReference, buildAction, dispatchedMessage.getMessage().getMentions().getRoles());
         if (messageContent == null) return;
         dispatchedMessage.getMessage().editMessage(messageContent).queue(
                 message -> dispatchedMessages.set(dispatchedMessages.indexOf(dispatchedMessage), dispatchedMessage.update(message, gameReference)),

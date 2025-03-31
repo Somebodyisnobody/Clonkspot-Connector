@@ -18,6 +18,9 @@
 
 package de.creative_land.discord;
 
+import lombok.Getter;
+
+@Getter
 public class DiscordArguments {
     private final long guildId;
 
@@ -31,15 +34,4 @@ public class DiscordArguments {
         this.apiKey = apiKey;
     }
 
-    public long getGuildId() {
-        return guildId;
-    }
-
-    public String getAdminRoleName() {
-        return adminRoleName;
-    }
-
-    public String getApiKey() {
-        return apiKey;
-    }
 }

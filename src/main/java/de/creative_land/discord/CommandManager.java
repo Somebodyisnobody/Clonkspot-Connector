@@ -20,7 +20,8 @@ package de.creative_land.discord;
 
 import de.creative_land.Controller;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.PrivateChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
+import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -160,7 +161,7 @@ public class CommandManager {
             if (message.length() < 2000) {
                 c.sendMessage("```\n" + message + "\n```").queue();
             } else {
-                c.sendFile(message.getBytes(StandardCharsets.UTF_8), "help.txt").queue();
+                c.sendFiles(FileUpload.fromData(message.getBytes(StandardCharsets.UTF_8), "help.txt")).queue();
             }
         } catch (Exception e) {
             c.sendMessage(":x: Error: " + e.getClass().getName() + ", " + e.getMessage()).queue();

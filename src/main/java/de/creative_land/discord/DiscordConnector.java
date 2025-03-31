@@ -20,11 +20,12 @@ package de.creative_land.discord;
 
 import de.creative_land.Controller;
 import de.creative_land.discord.clonk_game_reference.Dispatcher;
+import lombok.Getter;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 
@@ -43,12 +44,16 @@ public class DiscordConnector {
 
     public final CommandManager commandManager;
 
+    @Getter
     private JDA jda;
 
+    @Getter
     private Guild guild;
 
+    @Getter
     private Role adminRole;
 
+    @Getter
     private TextChannel gameReferenceDispatchChannel;
 
     public DiscordConnector(DiscordArguments discordArguments) throws InterruptedException {
@@ -196,21 +201,5 @@ public class DiscordConnector {
             guild = jda.getGuildById(Controller.INSTANCE.configuration.getGuildId());
             return guild != null;
         }
-    }
-
-    public JDA getJda() {
-        return jda;
-    }
-
-    public Guild getGuild() {
-        return guild;
-    }
-
-    public Role getAdminRole() {
-        return adminRole;
-    }
-
-    public TextChannel getGameReferenceDispatchChannel() {
-        return gameReferenceDispatchChannel;
     }
 }

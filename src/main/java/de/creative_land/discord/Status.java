@@ -18,21 +18,15 @@
 
 package de.creative_land.discord;
 
+import lombok.Getter;
 import net.dv8tion.jda.api.OnlineStatus;
 
+@Getter
 public class Status {
 
     private OnlineStatus currentOnlineStatus;
 
     private Activity currentActivity;
-
-    public OnlineStatus getCurrentOnlineStatus() {
-        return currentOnlineStatus;
-    }
-
-    public Activity getCurrentActivity() {
-        return currentActivity;
-    }
 
     public void setErrNoChannel() {
         DiscordConnector.INSTANCE.getJda().getPresence().setStatus(OnlineStatus.DO_NOT_DISTURB);

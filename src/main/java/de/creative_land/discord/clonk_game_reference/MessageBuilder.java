@@ -24,6 +24,7 @@ import de.creative_land.Controller;
 import de.creative_land.clonkspot.model.GameReference;
 import de.creative_land.discord.DiscordConnector;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.utils.FileUpload;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -330,7 +331,11 @@ public class MessageBuilder {
                                         if (message.length() < 1900) {
                                             success.sendMessage("Reference matched blacklisted entry \"" + matchedKeyword.get() + "\": \n```\n" + message + "\n```").queue();
                                         } else {
-                                            success.sendFile(("Reference matched blacklisted entry \"" + matchedKeyword.get() + "\": \n" + message).getBytes(StandardCharsets.UTF_8), "blacklisted entry.txt").queue();
+                                            success.sendFiles(FileUpload.fromData(
+                                                    ("Reference matched blacklisted entry \"" + matchedKeyword.get() + "\": \n" + message)
+                                                            .getBytes(StandardCharsets.UTF_8),
+                                                    "blacklisted entry.txt"
+                                            )).queue();
                                         }
                                     } catch (JsonProcessingException e) {
                                         Controller.INSTANCE.log.addLogEntry("DiscordConnector: Failed to send blacklist notification" + gameReference.id + " to user \"" + member.getNickname() + "\"", e);

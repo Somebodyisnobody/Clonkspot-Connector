@@ -19,29 +19,42 @@
 package de.creative_land.discord;
 
 import de.creative_land.Controller;
-import net.dv8tion.jda.api.entities.PrivateChannel;
-import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
+import lombok.NonNull;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class ChatListener extends ListenerAdapter {
 
     @Override
-    public void onPrivateMessageReceived(PrivateMessageReceivedEvent event) {
-        final var commandManager = DiscordConnector.INSTANCE.commandManager;
-        String message = event.getMessage().getContentDisplay();
-        PrivateChannel channel = event.getChannel();
+    public void onMessageReceived(@NonNull MessageReceivedEvent event) {
+        super.onMessageReceived(event);
 
+        if (!event.getChannelType().equals(ChannelType.PRIVATE)) {
+            return;
+        }
+        final String message = event.getMessage().getContentDisplay();
+        final PrivateChannel channel = event.getChannel().asPrivateChannel();
 
         if (event.getAuthor().getIdLong() != event.getJDA().getSelfUser().getIdLong()) {
-            DiscordConnector.INSTANCE.getGuild().retrieveMember(event.getAuthor()).queue(member -> {
-                if (!commandManager.checkAdmin(member)) {
-                    channel.sendMessage("You are not permitted to talk with me!").queue();
-                    Controller.INSTANCE.log.addLogEntry("DiscordConnector: Unauthorized command: \"" + event.getMessage().getContentDisplay() + "\", by " + event.getMessage().getAuthor().getName() + ".");
-                    return;
-                }
+            try {
+                DiscordConnector.INSTANCE.getGuild().retrieveMember(event.getAuthor()).queue(member -> {
+                    final CommandManager commandManager = DiscordConnector.INSTANCE.commandManager;
+                    if (!commandManager.checkAdmin(member)) {
+                        channel.sendMessage("You are not permitted to talk with me!").queue();
+                        Controller.INSTANCE.log.addLogEntry("DiscordConnector: Unauthorized command: \"" + event.getMessage().getContentDisplay() + "\", by " + event.getMessage().getAuthor().getName() + ".");
+                        return;
+                    }
 
-                commandManager.selectAndPerformCommand(message, event.getChannel());
-            });
+                    commandManager.selectAndPerformCommand(message, channel);
+                });
+            } catch (ErrorResponseException e) {
+                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Unauthorized command: \"" + event.getMessage().getContentDisplay() + "\", by " + event.getMessage().getAuthor().getName() + ".");
+            }
         }
+
+
     }
 }
