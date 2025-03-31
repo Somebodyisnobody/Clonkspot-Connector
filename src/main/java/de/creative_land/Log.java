@@ -18,7 +18,6 @@
 
 package de.creative_land;
 
-import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Serializable;
@@ -39,7 +38,7 @@ public class Log {
         final StringBuilder sb = new StringBuilder("Clonkspot Discord Connector ☜(ﾟヮﾟ☜)\t|\tVersion ");
         try {
             sb.append(getArtifactVersion());
-        } catch (XMLStreamException | IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
             sb.append("Error reading artifact version!");
         }

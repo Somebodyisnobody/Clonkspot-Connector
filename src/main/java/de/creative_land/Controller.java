@@ -24,13 +24,13 @@ import de.creative_land.discord.DiscordArguments;
 import de.creative_land.discord.DiscordConnector;
 import de.creative_land.http_input.HttpController;
 import net.dv8tion.jda.api.OnlineStatus;
-import org.apache.maven.api.model.Model;
-import org.apache.maven.model.v4.MavenStaxReader;
 
-import javax.xml.stream.XMLStreamException;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Objects;
+import java.util.Properties;
 
 public class Controller {
     public static final String VERSION = "1.1";
@@ -200,23 +200,9 @@ public class Controller {
         }).start();
     }
 
-    public static String getArtifactVersion() throws IOException, XMLStreamException {
-        MavenStaxReader reader = new MavenStaxReader();
-        Model model;
-        if ((new File("pom.xml")).exists()) {
-            model = reader.read(new FileReader("pom.xml"));
-        } else {
-            final Class<Controller> thisClass = Controller.class;
-            model = reader.read(
-                    new InputStreamReader(
-                            Objects.requireNonNull(
-                                    thisClass.getResourceAsStream(
-                                            "/META-INF/maven/" + thisClass.getPackageName() + "/clonkspot-connector/pom.xml"
-                                    )
-                            )
-                    )
-            );
-        }
-        return model.getVersion();
+    public static String getArtifactVersion() throws IOException {
+        final Properties properties = new Properties();
+        properties.load(Controller.class.getClassLoader().getResourceAsStream("project.properties"));
+        return properties.getProperty("application.version");
     }
 }
