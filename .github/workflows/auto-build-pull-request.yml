@@ -31,9 +31,8 @@ jobs:
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "pull #${{ github.event.number }}"
           prerelease: true
-          title: "Auto-build Pull Request #${{ github.event.number }}"
+          title: "Auto-build Pull Request ${{ github.event.number }}"
           files: |
             LICENSE.md
             target/*.jar
