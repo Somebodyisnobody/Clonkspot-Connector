@@ -40,18 +40,20 @@ public class SseListener implements ServerSentEvent.Listener {
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES, new ArrayBlockingQueue<>(50));
 
     int errorCounter = 0;
-    boolean firstStart = true;
     private final WatchDog watchDog;
     boolean errorStatusSet = false;
 
+    /**
+     * The underlying implementation only calls onOpen()
+     * when the HTTP response was successful (Okhttp3.Response::isSuccessful)
+     */
     @Override
     public void onOpen(ServerSentEvent sse, Response response) {
-        //Avoid spamming when channel reopens. Message will be sent only once.
-        if (firstStart) {
-            Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE channel opened.");
-            firstStart = false;
-            watchDog.feed();
-        }
+        Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE channel opened.");
+
+        watchDog.feed();
+
+        errorCounter = 0;
 
         if (errorStatusSet && Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             DiscordConnector.INSTANCE.status.setRunning();
@@ -59,9 +61,6 @@ public class SseListener implements ServerSentEvent.Listener {
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: RUNNING.");
             errorStatusSet = false;
         }
-
-        //reset errorCounter on successful connect
-        errorCounter = 0;
     }
 
     @Override
@@ -89,46 +88,48 @@ public class SseListener implements ServerSentEvent.Listener {
     public boolean onRetryError(ServerSentEvent sse, Throwable throwable, Response response) {
         if (throwable instanceof IOException ioException) {
             Controller.INSTANCE.log.addLogEntry(
-                    "ClonkspotConnector: SSE retry error. Will not retry again: '%s'".formatted(ioException.getMessage())
+                    "ClonkspotConnector: SSE error: '%s'".formatted(ioException)
             );
-            if (response != null) {
-                Controller.INSTANCE.log.addLogEntry(
-                        "ClonkspotConnector: SSE response from upstream returned HTTP status code: '%s'".formatted(
-                                response.code()
-                        )
-                );
-            }
+        }
+
+        // Don't try again if http status code is errornous.
+        if (response != null && !response.isSuccessful()) {
+            Controller.INSTANCE.log.addLogEntry(
+                    "ClonkspotConnector: SSE response from upstream returned HTTP status code: '%s' Will not retry again.".formatted(
+                            response.code()
+                    )
+            );
+            setErrorStatus();
             return false;
         }
 
-        if (errorCounter < 30000) {
-            errorCounter++;
-        }
-
-        //Avoid spamming when channel reopens, just log at 2 errors in the roll
-        if (errorCounter > 1) {
-            Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE retry error. Error counter: " + errorCounter + ".");
-        }
-
+        // Don't try again after more than 10 unsuccessful retries
         if (errorCounter >= 10) {
-            if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
-                DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
-                Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: ERROR_UPSTREAM_OFFLINE.");
-                errorStatusSet = true;
-            }
+            Controller.INSTANCE.log
+                    .addLogEntry("ClonkspotConnector: Tried to reconnect SSE client 10 times. Will not retry again.");
+            setErrorStatus();
             return false;
         }
+
+        errorCounter++;
         return true;
+    }
+
+    private void setErrorStatus() {
+        errorStatusSet = true;
+        if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
+            DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
+            Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: ERROR_UPSTREAM_OFFLINE.");
+        }
     }
 
     @Override
     public void onClosed(ServerSentEvent sse) {
-        //Avoid spamming when channel reopens. Message will be sent if onRetryError() wasn't called before
-        if (errorCounter < 2) log.info("ClonkspotConnector: SSE channel closed.");
+        log.info("ClonkspotConnector: SSE channel closed.");
     }
 
     @Override
     public Request onPreRetry(ServerSentEvent sse, Request originalRequest) {
-        return null;
+        return originalRequest;
     }
 }
