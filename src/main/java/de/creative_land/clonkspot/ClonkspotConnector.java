@@ -23,6 +23,8 @@ import com.here.oksse.ServerSentEvent;
 import de.creative_land.Controller;
 import okhttp3.Request;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,6 +39,8 @@ public class ClonkspotConnector {
 
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    private final WatchDog watchDog;
+
     public ClonkspotConnector() {
         INSTANCE = this;
 
@@ -44,9 +48,13 @@ public class ClonkspotConnector {
 
         okSse = new OkSse();
 
+        watchDog = new WatchDog(
+                this::restartSSE,
+                Duration.of(Controller.INSTANCE.configuration.getSseWatchdogTimeout(), ChronoUnit.SECONDS)
+        );
         restartSSE();
         executorService.execute(watchDog);
-    }    private final WatchDog watchDog = new WatchDog(this::restartSSE);
+    }
 
     /**
      * Creates a new SSE-Client and overwrites an old one.

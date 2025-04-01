@@ -19,8 +19,10 @@
 package de.creative_land.clonkspot;
 
 import de.creative_land.Controller;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -29,19 +31,26 @@ import java.util.concurrent.TimeUnit;
 public class WatchDog implements Runnable {
 
     private final Runnable alarmAction;
+    private final Duration timeout;
     private final BlockingQueue<Boolean> watchdogFood = new LinkedBlockingQueue<>();
 
-    public WatchDog(Runnable alarmAction) {
+    public WatchDog(@NonNull Runnable alarmAction, @NonNull Duration timeout) {
         this.alarmAction = alarmAction;
+        this.timeout = timeout;
     }
 
     @Override
     public void run() {
         Thread.currentThread().setName("SSE Connection Watchdog");
+        if (timeout.isZero()) {
+            Controller.INSTANCE.log.addLogEntry("ClonkspotConnector Watchdog: Timeout set to 0 seconds. Watchdog not active.");
+            return;
+        }
+        Controller.INSTANCE.log.addLogEntry("ClonkspotConnector Watchdog: Timeout set to %s seconds.".formatted(timeout.toSeconds()));
         try {
             while (true) {
-                if (watchdogFood.poll(61, TimeUnit.SECONDS) == null) {
-                    Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: SSE timeout. Restarting SSE listener");
+                if (watchdogFood.poll(timeout.toSeconds(), TimeUnit.SECONDS) == null) {
+                    Controller.INSTANCE.log.addLogEntry("ClonkspotConnector Watchdog: SSE timeout. Restarting SSE listener");
                     alarmAction.run();
                 }
             }

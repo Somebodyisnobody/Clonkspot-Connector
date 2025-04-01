@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.creative_land.discord.DiscordConnector;
 import de.creative_land.discord.clonk_game_reference.ManipulationRule;
 import de.creative_land.discord.clonk_game_reference.MentionRoleCooldown;
+import lombok.Getter;
 import net.dv8tion.jda.api.JDA;
 
 import java.io.File;
@@ -58,7 +59,11 @@ public class Configuration {
 
     private String joinUrl;
 
+    @Getter
     private String sseEndpoint;
+
+    @Getter
+    private int sseWatchdogTimeout;
 
     public Configuration(@JsonProperty("manipulationRules") ArrayList<ManipulationRule> manipulationRules, @JsonProperty("ignoredHostnames") ArrayList<IgnoredHostname> ignoredHostnames, @JsonProperty("mentionRoleCooldowns") ArrayList<MentionRoleCooldown> mentionRoleCooldowns) {
         this.manipulationRules = manipulationRules;
@@ -234,10 +239,6 @@ public class Configuration {
     public void setJoinUrl(String joinUrl) {
         this.joinUrl = joinUrl;
         saveConfig();
-    }
-
-    public String getSseEndpoint() {
-        return sseEndpoint;
     }
 
     public void setSseEndpoint(String sseEndpoint) {
