@@ -19,11 +19,13 @@
 package de.creative_land.clonkspot.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
 
 @SuppressWarnings("unused")
+@Getter
 public class GameReference {
 
-    final public int id;
+    final public Integer id;
 
     final public String title;
 
@@ -33,7 +35,7 @@ public class GameReference {
 
     final public String comment;
 
-    final public int maxPlayers;
+    final public Integer maxPlayers;
 
     final public String hostname;
 
@@ -43,15 +45,13 @@ public class GameReference {
 
     final public String engine;
 
-    final public int engineBuild;
+    final public Integer engineBuild;
 
     final public Player[] players;
 
     final public Flags flags;
 
     final public Scenario scenario;
-
-    public String sseEventType;
 
     public GameReference(@JsonProperty("id") int id, @JsonProperty("title") String title, @JsonProperty("status") String status,
                          @JsonProperty("type") String league, @JsonProperty("comment") String comment, @JsonProperty("maxPlayers") int maxPlayers,
