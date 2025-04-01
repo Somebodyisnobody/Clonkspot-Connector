@@ -59,7 +59,6 @@ public class Dispatcher {
      * @param message SSE message
      * @param event   SSE event
      */
-    //
     public synchronized void process(@NotNull String message, @NotNull String event) {
         if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.ONLINE)) return;
 
@@ -202,7 +201,10 @@ public class Dispatcher {
      */
     private boolean announceNewGameReference(GameReference gameReference, AnnounceReason announceReason) {
         //Never announce if the bot status is not RUNNING
-        if (!isRunning()) return false;
+        if (!canDispatch()) return false;
+
+        //Only announce games that are newly created or in the lobby. Already existing announcements for other games may only be edited.
+        if (!gameReference.getStatus().equals("created") && !gameReference.getStatus().equals("lobby")) return false;
 
         //Only announce games with a specific host engine version
         if (!isTargetVersion(gameReference))
@@ -257,7 +259,7 @@ public class Dispatcher {
      *
      * @return true, if the bot is in status "RUNNING".
      */
-    private boolean isRunning() {
+    private boolean canDispatch() {
         return Objects.equals(DiscordConnector.INSTANCE.status.getCurrentActivity(), de.creative_land.discord.Activity.RUNNING);
     }
 
