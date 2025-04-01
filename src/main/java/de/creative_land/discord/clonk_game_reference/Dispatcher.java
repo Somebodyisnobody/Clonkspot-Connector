@@ -65,17 +65,22 @@ public class Dispatcher {
 
         if (event.equals("init")) {
             processInitEvent(message);
-            return;
-        } else if (event.equals("create") || event.equals("update") || event.equals("delete") || event.equals("end")) {
+        } else {
             final GameReference gameReference;
             if ((gameReference = parseGameReference(message)) == null) return;
-            final GameRefEvent gameRefEvent = new GameRefEvent(gameReference, GameRefEvent.EventType.fromValue(event));
+
+            GameRefEvent.EventType eventType;
+            try {
+                eventType = GameRefEvent.EventType.fromValue(event);
+            } catch (IllegalArgumentException e) {
+                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Unknown event received: '%s'".formatted(event));
+                return;
+            }
+
+            final GameRefEvent gameRefEvent = new GameRefEvent(gameReference, eventType);
 
             executor.execute(() -> routeGameRefEvent(gameRefEvent));
-            return;
         }
-        // Ignore all other event types
-        Controller.INSTANCE.log.addLogEntry("DiscordConnector: Unknown event received: '%s'".formatted(event));
     }
 
     /**
