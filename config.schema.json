@@ -76,7 +76,9 @@
       "type" : "integer"
     },
     "hostCooldown" : {
-      "type" : "integer"
+      "type" : "integer",
+      "minimum" : 0,
+      "description" : "Watchdog timeout in seconds for the SSE channel."
     },
     "engine" : {
       "type" : "string"
