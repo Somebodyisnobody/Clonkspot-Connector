@@ -1,0 +1,113 @@
+{
+  "$schema" : "http://json-schema.org/draft-04/schema#",
+  "type" : "object",
+  "properties" : {
+    "manipulationRules" : {
+      "type" : "array",
+      "items" : [
+        {
+          "type" : "object",
+          "properties" : {
+            "pattern" : {
+              "type" : "string"
+            },
+            "replacement" : {
+              "type" : "string"
+            },
+            "roles" : {
+              "type" : "array",
+              "items" : [
+                {
+                  "type" : "string"
+                }
+              ]
+            },
+            "name" : {
+              "type" : "string"
+            },
+            "author" : {
+              "type" : "string"
+            }
+          },
+          "required" : [
+            "pattern",
+            "replacement",
+            "roles",
+            "name",
+            "author"
+          ]
+        }
+      ]
+    },
+    "mentionRoleCooldowns" : {
+      "type" : "array",
+      "items" : [
+        {
+          "type" : "object",
+          "properties" : {
+            "role" : {
+              "type" : "string"
+            },
+            "cooldown" : {
+              "type" : "integer"
+            },
+            "author" : {
+              "type" : "string"
+            }
+          },
+          "required" : [
+            "role",
+            "cooldown",
+            "author"
+          ]
+        }
+      ]
+    },
+    "apiKey" : {
+      "type" : "string"
+    },
+    "targetDispatchChannel" : {
+      "type" : "integer"
+    },
+    "adminRole" : {
+      "type" : "integer"
+    },
+    "guildId" : {
+      "type" : "integer"
+    },
+    "hostCooldown" : {
+      "type" : "integer"
+    },
+    "engine" : {
+      "type" : "string"
+    },
+    "engineBuild" : {
+      "type" : "integer"
+    },
+    "joinUrl" : {
+      "type" : "string"
+    },
+    "sseEndpoint" : {
+      "type" : "string"
+    },
+    "sseWatchdogTimeout" : {
+      "type" : "integer",
+      "minimum" : 0,
+      "description" : "Watchdog timeout in seconds for the SSE channel."
+    }
+  },
+  "required" : [
+    "manipulationRules",
+    "mentionRoleCooldowns",
+    "apiKey",
+    "targetDispatchChannel",
+    "adminRole",
+    "guildId",
+    "hostCooldown",
+    "engine",
+    "engineBuild",
+    "joinUrl",
+    "sseEndpoint",
+    "sseWatchdogTimeout"
+  ]
+}
