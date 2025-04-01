@@ -39,7 +39,7 @@ jobs:
         env:
           prNumber: ${{ steps.PR.outputs.number }}
           # JSON object with the full PR object
-          prJSON: ${{ steps.PR.outputs.pr }
+          prJSON: ${{ steps.PR.outputs.pr }}
 
 
       - uses: "marvinpinto/action-automatic-releases@latest"
