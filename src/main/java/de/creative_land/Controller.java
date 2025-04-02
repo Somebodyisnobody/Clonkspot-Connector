@@ -166,6 +166,11 @@ public class Controller {
      * Starts a new thread to listen to the console and process incoming commands.
      */
     public static void readConsole() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Controller: Gracefully shutting down.");
+            gracefulShutdown();
+        }));
+
         new Thread(() -> {
             String line;
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
@@ -173,9 +178,7 @@ public class Controller {
                 while ((line = bufferedReader.readLine()) != null) {
 
                     if (line.equalsIgnoreCase("exit")) {
-                        DiscordConnector.INSTANCE.getJda().getPresence().setStatus(OnlineStatus.OFFLINE);
-                        DiscordConnector.INSTANCE.getJda().shutdown();
-                        ClonkspotConnector.INSTANCE.sse.close();
+                        gracefulShutdown();
                         System.out.println("Issued shutdown by console");
                         break;
                     } else if (line.equalsIgnoreCase("help")) {
@@ -198,6 +201,12 @@ public class Controller {
             }
 
         }).start();
+    }
+
+    private static void gracefulShutdown() {
+        DiscordConnector.INSTANCE.getJda().getPresence().setStatus(OnlineStatus.OFFLINE);
+        DiscordConnector.INSTANCE.getJda().shutdown();
+        ClonkspotConnector.INSTANCE.sse.close();
     }
 
     public static String getArtifactVersion() throws IOException {
