@@ -143,6 +143,7 @@ public class Commands {
         sb.append(String.format("General host cooldown: %d minutes\n", conf.getHostCooldown()));
         sb.append(String.format("Clonk version: \"%s\" on %d\n", conf.getEngine(), conf.getEngineBuild()));
         sb.append(String.format("SSE Endpoint: \"%s\"\n", conf.getSseEndpoint()));
+        sb.append(String.format("SSE Watchdog Timeout: %s seconds\n".formatted(conf.getSseWatchdogTimeout())));
 
         sb.append("\n");
 
