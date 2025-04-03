@@ -21,23 +21,30 @@ package de.creative_land.discord.clonk_game_reference;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import de.creative_land.Controller;
+import de.creative_land.clonkspot.model.GameRefEvent;
 import de.creative_land.clonkspot.model.GameReference;
 import de.creative_land.discord.DiscordConnector;
+import lombok.Getter;
+import lombok.NonNull;
 import net.dv8tion.jda.api.OnlineStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Dispatcher {
 
     private final MessageBuilder messageBuilder;
+    @Getter
     private final ArrayList<DispatchedMessage> dispatchedMessages;
     private final HashSet<Integer> processedGamesList;
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES, new ArrayBlockingQueue<>(50));
 
     public Dispatcher() {
         this.messageBuilder = new MessageBuilder();
@@ -46,19 +53,86 @@ public class Dispatcher {
     }
 
     /**
-     * Processes a game reference as SSE event. If it matches the conditions an announcing message will be sent to discord.
+     * Processes a game reference as SSE event. If it matches the conditions an announcing message will be sent to discord. <br/>
+     * Synchronized as no init messages should be processed in parallel.
      *
      * @param message SSE message
      * @param event   SSE event
      */
-    public void process(@NotNull String message, @NotNull String event) {
+    public synchronized void process(@NotNull String message, @NotNull String event) {
         if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.ONLINE)) return;
-        if (!(event.equals("create") || event.equals("update") || event.equals("delete") || event.equals("end")))
-            return;
 
-        final GameReference gameReference;
-        if ((gameReference = parseJson(message)) == null) return;
-        gameReference.sseEventType = event;
+        if (event.equals("init")) {
+            processInitEvent(message);
+        } else {
+            final GameReference gameReference;
+            if ((gameReference = parseGameReference(message)) == null) return;
+
+            GameRefEvent.EventType eventType;
+            try {
+                eventType = GameRefEvent.EventType.fromValue(event);
+            } catch (IllegalArgumentException e) {
+                Controller.INSTANCE.log.addLogEntry("DiscordConnector: Unknown event received: '%s'".formatted(event));
+                return;
+            }
+
+            final GameRefEvent gameRefEvent = new GameRefEvent(gameReference, eventType);
+
+            executor.execute(() -> routeGameRefEvent(gameRefEvent));
+        }
+    }
+
+    /**
+     * Processes an init SSE event. New games will be determined, ended games will be marked as such.
+     *
+     * @param message SSE message
+     */
+    public void processInitEvent(@NotNull String message) {
+        List<GameReference> gameReferences = parseGameReferenceList(message);
+        if (gameReferences.isEmpty()) return;
+
+        gameReferences.stream()
+                .filter(
+                        // All game references that are in the init message but not in the list of dispatched messages are new and to be processed as created
+                        gameReference -> dispatchedMessages.stream()
+                                .map(DispatchedMessage::getGameReference)
+                                .map(GameReference::getId)
+                                .noneMatch(id -> id.equals(gameReference.getId()))
+                )
+                .map(gameReference -> new GameRefEvent(gameReference, GameRefEvent.EventType.CREATE))
+                .forEach(this::routeGameRefEvent);
+
+        // All dispatched messages whose game references are not in the init message are old games which have ended in an unkonwn way.
+        // Possible endings (💥 = SSE connection interrupt)
+        // * Game was running -> 💥 -> game ended -> init event                  -> game ended
+        // * Game was in lobby -> 💥 -> lobby closed -> init event               -> unknown status
+        // * Game was in lobby -> 💥 -> game started -> game ended -> init event -> unknown status
+        dispatchedMessages.stream()
+                .filter(dispatchedMessage -> !dispatchedMessage.getDeleted())
+                .map(DispatchedMessage::getGameReference)
+                .filter(
+                        gameReference -> gameReferences.stream()
+                                .map(GameReference::getId)
+                                .noneMatch(id -> id.equals(gameReference.getId()))
+                )
+                .map(lastKnownGameReference -> {
+                    if (lastKnownGameReference.getStatus().equals("running")) {
+                        return new GameRefEvent(lastKnownGameReference, GameRefEvent.EventType.GAME_ENDED);
+                    } else {
+                        // All references whoose last known status was not "running" have an unknown reason for not existing anymore.
+                        return new GameRefEvent(lastKnownGameReference, GameRefEvent.EventType.UNKNOWN_ENDED_OR_CLOSED);
+                    }
+                })
+                .forEach(this::routeGameRefEvent);
+    }
+
+    /**
+     * Decides which action is to be performed out based on the event type.
+     *
+     * @param gameRefEvent The game reference event
+     */
+    private void routeGameRefEvent(@NotNull GameRefEvent gameRefEvent) {
+        final GameReference gameReference = gameRefEvent.getGameReference();
 
         synchronized (processedGamesList) {
             while (processedGamesList.contains(gameReference.id)) {
@@ -70,11 +144,11 @@ public class Dispatcher {
             processedGamesList.add(gameReference.id);
         }
 
-        switch (event) {
-            case "create" -> createEvent(gameReference);
-            case "update" -> updateEvent(gameReference);
-            case "delete" -> deleteEvent(gameReference); //nicht gestartetes game beendet
-            case "end" -> endEvent(gameReference);    //gestartetes game zu ende
+        switch (gameRefEvent.getEventType()) {
+            case CREATE -> createEvent(gameReference);
+            case UPDATE -> updateEvent(gameReference);
+            case LOBBY_CLOSED -> deleteEvent(gameReference); //nicht gestartetes game beendet
+            case GAME_ENDED, UNKNOWN_ENDED_OR_CLOSED -> endEvent(gameReference);    //gestartetes game zu ende
         }
 
         synchronized (processedGamesList) {
@@ -85,7 +159,7 @@ public class Dispatcher {
 
     //START EVENTS//
     private void createEvent(GameReference gameReference) {
-        announceNewGameReference(gameReference);
+        announceNewGameReference(gameReference, AnnounceReason.NEW);
     }
 
     @SuppressWarnings("UnnecessaryReturnStatement")
@@ -93,7 +167,7 @@ public class Dispatcher {
         if (gameReference.status.equals("lobby")) {
 
             //Announce a game if it was not announced by cooldown and the cooldown is over
-            if (announceNewGameReference(gameReference)) return;
+            if (announceNewGameReference(gameReference, AnnounceReason.UPDATE)) return;
 
         } else if (gameReference.status.equals("running")) {
 
@@ -122,14 +196,18 @@ public class Dispatcher {
      * Sends a new message to discord. On success the game is added to a {@link DispatchedMessage} list to avoid double announcing. On fail a rescan of the environment is called.
      *
      * @param gameReference parsed game reference.
+     * @param announceReason reason why the game is to be announced.
      * @return true if the game reference was handled, false if it was rejected.
      */
-    private boolean announceNewGameReference(GameReference gameReference) {
+    private boolean announceNewGameReference(GameReference gameReference, AnnounceReason announceReason) {
         //Never announce if the bot status is not RUNNING
-        if (!isRunning()) return false;
+        if (!canDispatch()) return false;
+
+        //Only announce games that are newly created or in the lobby. Already existing announcements for other games may only be edited.
+        if (!gameReference.getStatus().equals("created") && !gameReference.getStatus().equals("lobby")) return false;
 
         //Only announce games with a specific host engine version
-        if (!isCorrectVersion(gameReference))
+        if (!isTargetVersion(gameReference))
             return false;
 
         //Never announce an already announced game (checked by game id)
@@ -138,7 +216,7 @@ public class Dispatcher {
         //Never announce ignored hosts exempt they have active players
         if (isIgnoredHost(gameReference)) {
             //Only log if it's a new game to avoid log spam
-            if (gameReference.sseEventType.equals("create"))
+            if (announceReason == AnnounceReason.NEW)
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by hostname: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
             return false;
         }
@@ -146,7 +224,7 @@ public class Dispatcher {
         //Never announce hosts with active cooldown (checked by hostname)
         if (hostHasActiveCooldown(gameReference)) {
             //Only log if it's a new game to avoid log spam
-            if (gameReference.sseEventType.equals("create"))
+            if (announceReason == AnnounceReason.NEW)
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by cooldown: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
             return false;
         }
@@ -154,7 +232,7 @@ public class Dispatcher {
         //Never announce password protected games
         if (gameReference.flags.passwordNeeded) {
             //Only log if it's a new game to avoid log spam
-            if (gameReference.sseEventType.equals("create"))
+            if (announceReason == AnnounceReason.NEW)
                 Controller.INSTANCE.log.addLogEntry("DiscordConnector: Ignored by password: " + gameReference.id + ", Host: \"" + gameReference.hostname + "\".");
             return false;
         }
@@ -181,7 +259,7 @@ public class Dispatcher {
      *
      * @return true, if the bot is in status "RUNNING".
      */
-    private boolean isRunning() {
+    private boolean canDispatch() {
         return Objects.equals(DiscordConnector.INSTANCE.status.getCurrentActivity(), de.creative_land.discord.Activity.RUNNING);
     }
 
@@ -191,7 +269,7 @@ public class Dispatcher {
      * @param gameReference parsed game reference.
      * @return true if the game reference has the correct version, false if not.
      */
-    private boolean isCorrectVersion(GameReference gameReference) {
+    private boolean isTargetVersion(GameReference gameReference) {
         final var engine = Controller.INSTANCE.configuration.getEngine();
         final var engineBuild = Controller.INSTANCE.configuration.getEngineBuild();
 
@@ -214,7 +292,7 @@ public class Dispatcher {
 
         //Filter out the references that belongs to the game and allowed runtime join or was in status lobby before
         final var optionalDispatchedMessage = dispatchedMessages.stream()
-                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id)
+                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id.equals(gameReference.id))
                 .filter(dispatchedMessage -> !dispatchedMessage.getDeleted())
                 .filter(dispatchedMessage -> dispatchedMessage.getGameReference().flags.joinAllowed || dispatchedMessage.getGameReference().status.equals("created"))
                 .findFirst();
@@ -239,7 +317,7 @@ public class Dispatcher {
 
         //Filter out the reference that belongs to the game and denied runtime join or was in status lobby before
         final var optionalDispatchedMessage = dispatchedMessages.stream()
-                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id)
+                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id.equals(gameReference.id))
                 .filter(dispatchedMessage -> !dispatchedMessage.getDeleted())
                 .filter(dispatchedMessage -> !dispatchedMessage.getGameReference().flags.joinAllowed || dispatchedMessage.getGameReference().status.equals("created"))
                 .findFirst();
@@ -261,7 +339,7 @@ public class Dispatcher {
 
         //Search for game reference id and replace
         final var optionalDispatchedMessage = dispatchedMessages.stream()
-                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id)
+                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id.equals(gameReference.id))
                 .filter(dispatchedMessage -> !dispatchedMessage.getDeleted())
                 .findFirst();
 
@@ -280,7 +358,7 @@ public class Dispatcher {
     private boolean deleteReference(GameReference gameReference) {
         //Search for game reference id and delete
         final var optionalDispatchedMessage = dispatchedMessages.stream()
-                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id)
+                .filter(dispatchedMessage -> dispatchedMessage.getGameReference().id.equals(gameReference.id))
                 .filter(dispatchedMessage -> !dispatchedMessage.getDeleted())
                 .findFirst();
 
@@ -331,7 +409,7 @@ public class Dispatcher {
      * @return true if a game with the same id was announced in earlier.
      */
     private boolean isAlreadyAnnounced(GameReference gameReference) {
-        return dispatchedMessages.stream().anyMatch(dispatchedMessage -> dispatchedMessage.getGameReference().id == gameReference.id);
+        return dispatchedMessages.stream().anyMatch(dispatchedMessage -> dispatchedMessage.getGameReference().id.equals(gameReference.id));
     }
 
     /**
@@ -366,12 +444,12 @@ public class Dispatcher {
     }
 
     /**
-     * Parses a JSON-String of a SSE-event into a {@link GameReference}.
+     * Parses a JSON-String of an SSE-event into a {@link GameReference}.
      *
      * @param message SSE-message in JSON format.
      * @return a {@link GameReference} parsed from the String or null if the message could not be parsed.
      */
-    private GameReference parseJson(String message) {
+    private GameReference parseGameReference(String message) {
         ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
             return mapper.readValue(message, GameReference.class);
@@ -379,6 +457,23 @@ public class Dispatcher {
             Controller.INSTANCE.log.addLogEntry("DiscordConnector: JSON Parsing error: \n", e);
         }
         return null;
+    }
+
+    /**
+     * Parses a JSON-String of an SSE-event into a {@link GameReference} list.
+     *
+     * @param message SSE-message in JSON format.
+     * @return a list of {@link GameReference} parsed from the String or null if the message could not be parsed.
+     */
+    private @NonNull List<GameReference> parseGameReferenceList(String message) {
+        ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        TypeFactory typeFactory = mapper.getTypeFactory();
+        try {
+            return mapper.readValue(message, typeFactory.constructCollectionType(List.class, GameReference.class));
+        } catch (JsonProcessingException e) {
+            Controller.INSTANCE.log.addLogEntry("DiscordConnector: JSON Parsing error: \n", e);
+        }
+        return Collections.emptyList();
     }
 
     /**
@@ -393,7 +488,8 @@ public class Dispatcher {
         dispatchedMessages.add(dispatchedMessage);
     }
 
-    public ArrayList<DispatchedMessage> getDispatchedMessages() {
-        return dispatchedMessages;
+    private enum AnnounceReason {
+        NEW,
+        UPDATE
     }
 }

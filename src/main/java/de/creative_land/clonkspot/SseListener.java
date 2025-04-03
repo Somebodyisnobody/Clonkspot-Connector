@@ -29,15 +29,10 @@ import okhttp3.Response;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RequiredArgsConstructor
 public class SseListener implements ServerSentEvent.Listener {
-
-    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 5, 2, TimeUnit.MINUTES, new ArrayBlockingQueue<>(50));
 
     int errorCounter = 0;
     private final WatchDog watchDog;
@@ -67,7 +62,7 @@ public class SseListener implements ServerSentEvent.Listener {
     public void onMessage(ServerSentEvent sse, String id, String event, String message) {
         watchDog.feed();
         try {
-            executor.execute(() -> DiscordConnector.INSTANCE.gameDispatcher.process(message, event));
+            DiscordConnector.INSTANCE.gameDispatcher.process(message, event);
         } catch (Exception e) {
             Controller.INSTANCE.log.addLogEntry(e);
         }
