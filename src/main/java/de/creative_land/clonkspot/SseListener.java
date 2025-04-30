@@ -36,7 +36,6 @@ public class SseListener implements ServerSentEvent.Listener {
 
     int errorCounter = 0;
     private final WatchDog watchDog;
-    boolean errorStatusSet = false;
 
     /**
      * The underlying implementation only calls onOpen()
@@ -50,11 +49,10 @@ public class SseListener implements ServerSentEvent.Listener {
 
         errorCounter = 0;
 
-        if (errorStatusSet && Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
+        if (Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             DiscordConnector.INSTANCE.status.setRunning();
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: Clonkspot is back!");
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: RUNNING.");
-            errorStatusSet = false;
         }
     }
 
@@ -111,7 +109,6 @@ public class SseListener implements ServerSentEvent.Listener {
     }
 
     private void setErrorStatus() {
-        errorStatusSet = true;
         if (!Objects.equals(DiscordConnector.INSTANCE.status.getCurrentOnlineStatus(), OnlineStatus.DO_NOT_DISTURB)) {
             DiscordConnector.INSTANCE.status.setErrUpstreamOffline();
             Controller.INSTANCE.log.addLogEntry("ClonkspotConnector: New status: ERROR_UPSTREAM_OFFLINE.");
